@@ -5,8 +5,16 @@ proc calc in
     CONST_A CONST_B +
 end
 
+proc print in
+    10 11 - dump
+end
+
 proc main in
-    "Calcul: " dump_str
+    "Calcul: " puts
     calc dump
-    "\nFin\n" dump_str
+    "\nFin\n" puts
+
+    print
+
+    "\n\nDone\n" puts
 end

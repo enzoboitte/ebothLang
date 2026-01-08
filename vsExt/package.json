@@ -1,0 +1,21 @@
+{
+  "name": "eboth",
+  "displayName": "Eboth Stack Language",
+  "version": "1.0.0",
+  "publisher": "enzo",
+  "engines": {"vscode": "^1.60.0"},
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [{
+      "id": "eboth",
+      "aliases": ["Eboth", "eboth"],
+      "extensions": [".eb"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "eboth",
+      "scopeName": "source.eb",
+      "path": "./syntaxes/stacklang.tmGrammar.json"
+    }]
+  }
+}

@@ -10,10 +10,16 @@ enum EToken {
     Proc,
     In,
     End,
+
     Plus,
+    Minus,
+    Mul,
+    Div,
+    Mod,
+
     Dup,
     Swap,
-    DumpStr,
+    Puts,
     Dump,
     Syscall0,
     Syscall1,
@@ -151,10 +157,31 @@ impl CLexer {
                     let l_sStr = self.F_sReadString()?;
                     l_lTokens.push(EToken::String(l_sStr));
                 }
+
+                // Operators
                 Some('+') => {
                     self.F_cAdvance();
                     l_lTokens.push(EToken::Plus);
                 }
+                Some('-') => {
+                    self.F_cAdvance();
+                    l_lTokens.push(EToken::Minus);
+                }
+                Some('*') => {
+                    self.F_cAdvance();
+                    l_lTokens.push(EToken::Mul);
+                }
+                Some('/') => {
+                    self.F_cAdvance();
+                    l_lTokens.push(EToken::Div);
+                }
+                Some('%') => {
+                    self.F_cAdvance();
+                    l_lTokens.push(EToken::Mod);
+                }
+
+
+                // Numbers
                 Some(l_cChar) if l_cChar.is_numeric() || (l_cChar == '-' && self.l_sInput.chars().nth(self.l_iPos + 1).map_or(false, |c| c.is_numeric())) => {
                     let l_iNum = self.F_iReadNumber()?;
                     l_lTokens.push(EToken::Number(l_iNum));
@@ -168,7 +195,7 @@ impl CLexer {
                         "end" => EToken::End,
                         "dup" => EToken::Dup,
                         "swap" => EToken::Swap,
-                        "dump_str" => EToken::DumpStr,
+                        "puts" => EToken::Puts,
                         "dump" => EToken::Dump,
                         "syscall" => EToken::Syscall0,
                         "syscall1" => EToken::Syscall1,
@@ -280,10 +307,16 @@ impl CParser {
                 let l_sStatic = Box::leak(l_sStr.clone().into_boxed_str());
                 Ok(EIrInstr::PushStr(l_sStatic))
             }
+
             Some(EToken::Plus) => Ok(EIrInstr::AddI64),
+            Some(EToken::Minus) => Ok(EIrInstr::SubI64),
+            Some(EToken::Mul) => Ok(EIrInstr::MulI64),
+            Some(EToken::Div) => Ok(EIrInstr::DivI64),
+            Some(EToken::Mod) => Ok(EIrInstr::ModI64),
+
             Some(EToken::Dup) => Ok(EIrInstr::Dup),
             Some(EToken::Swap) => Ok(EIrInstr::Swap),
-            Some(EToken::DumpStr) => Ok(EIrInstr::DumpStr),
+            Some(EToken::Puts) => Ok(EIrInstr::Puts),
             Some(EToken::Dump) => Ok(EIrInstr::Dump),
             Some(EToken::Syscall0) => Ok(EIrInstr::Syscall0),
             Some(EToken::Syscall1) => Ok(EIrInstr::Syscall1),
