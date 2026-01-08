@@ -69,6 +69,34 @@ dump_str:
     ret
 
 
+proc_calc:
+    call     proc_CONST_A
+    call     proc_CONST_B
+    mov      rax, [r15]
+    add      rax, [r15 + 8]
+    add      r15, 8
+    mov      [r15], rax
+    ret      
+proc_print:
+    sub      r15, 8
+    mov      rax, 10
+    mov      qword [r15], rax
+    sub      r15, 8
+    mov      rax, 11
+    mov      qword [r15], rax
+    mov      rax, [r15 + 8]
+    sub      rax, [r15]
+    add      r15, 8
+    mov      [r15], rax
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_i
+    ret      
+proc_CONST_A:
+    sub      r15, 8
+    mov      rax, 100
+    mov      qword [r15], rax
+    ret      
 proc_main:
     sub      r15, 8
     mov      qword [r15], str_0
@@ -91,38 +119,10 @@ proc_main:
     add      r15, 8
     call     dump_str
     ret      
-proc_calc:
-    call     proc_CONST_A
-    call     proc_CONST_B
-    mov      rax, [r15]
-    add      rax, [r15 + 8]
-    add      r15, 8
-    mov      [r15], rax
-    ret      
-proc_CONST_A:
-    sub      r15, 8
-    mov      rax, 100
-    mov      qword [r15], rax
-    ret      
 proc_CONST_B:
     sub      r15, 8
     mov      rax, 200
     mov      qword [r15], rax
-    ret      
-proc_print:
-    sub      r15, 8
-    mov      rax, 10
-    mov      qword [r15], rax
-    sub      r15, 8
-    mov      rax, 11
-    mov      qword [r15], rax
-    mov      rax, [r15 + 8]
-    sub      rax, [r15]
-    add      r15, 8
-    mov      [r15], rax
-    mov      rdi, [r15]
-    add      r15, 8
-    call     dump_i
     ret      
 
 global _start
