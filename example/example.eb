@@ -6,13 +6,13 @@ proc calc in
 end
 
 proc print in
-    13456 dump
+    1234567891 dump
 end
 
 proc main in
-    "Calcul: " dump_str
+    "Calcul: " puts
     calc dump
-    "\nFin\n" dump_str
+    "\nFin\n" puts
 
     print
 end
