@@ -1,0 +1,7 @@
+proc N in 69 end
+proc M in 420 end
+proc add_nm in N M + end
+
+proc main in
+    add_nm dump
+end

@@ -1,0 +1,4 @@
+proc main in
+    10 20 swap dump dump
+    42 dup + dump
+end

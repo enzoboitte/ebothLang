@@ -1,0 +1,12 @@
+const CONST_A in 100 end
+const CONST_B in 200 end
+
+proc calc in
+    CONST_A CONST_B +
+end
+
+proc main in
+    "Calcul: " dump_str
+    calc dump
+    "\nFin\n" dump_str
+end
