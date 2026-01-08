@@ -1,0 +1,26 @@
+{
+  "comments": {"lineComment": "#"},
+  "brackets": [[
+    "proc",
+    "const",
+    "in",
+    "end",
+    "dup",
+    "swap",
+    "puts",
+    "dump",
+    "syscall",
+    "syscall1",
+    "syscall2",
+    "syscall3",
+    "syscall4",
+    "syscall5",
+    "syscall6",
+    "i64",
+    "f64",
+    "str",
+    "bool"  
+  ]],
+  "autoClosingPairs": [{"open": "\"", "close": "\""}],
+  "surroundingPairs": [["\"", "\""]]
+}

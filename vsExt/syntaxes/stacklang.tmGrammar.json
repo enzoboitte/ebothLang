@@ -1,0 +1,43 @@
+{
+  "scopeName": "source.eb",
+  "patterns": [
+    {"include": "#comments"},
+    {"include": "#strings"},
+    {"include": "#numbers"},
+    {"include": "#keywords"},
+    {"include": "#operators"},
+    {"include": "#builtins"},
+    {"include": "#identifiers"}
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [{"name": "comment.line.eb", "match": "#.*$"}]
+    },
+    "strings": {
+      "patterns": [{
+        "name": "string.quoted.double.eb",
+        "begin": "\"",
+        "end": "\"",
+        "patterns": [{"name": "constant.character.escape.eb", "match": "\\\\(n|t|r|\\\\|\")"}]
+      }]
+    },
+    "numbers": {
+      "patterns": [{"name": "constant.numeric.eb", "match": "-?\\d+"}]
+    },
+    "keywords": {
+      "patterns": [{"name": "keyword.control.eb", "match": "\\b(proc|const|in|end|dup|swap|puts|dump|syscall|syscall1|syscall2|syscall3|syscall4|syscall5|syscall6|i64|f64|str|bool)\\b"}]
+    },
+    "operators": {
+      "patterns": [{"name": "keyword.operator.eb", "match": "[+\\-*/%]"}]
+    },
+    "builtins": {
+      "patterns": [{"name": "support.function.eb", "match": "\\b(dup|swap|puts|dump|syscall[0-6]?)\\b"}]
+    },
+    "identifiers": {
+      "patterns": [
+        {"name": "entity.name.function.eb", "match": "\\b[A-Z_][A-Z0-9_]*\\b"},
+        {"name": "variable.other.eb", "match": "\\b[a-z_][a-z0-9_]*\\b"}
+      ]
+    }
+  }
+}

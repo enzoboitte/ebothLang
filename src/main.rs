@@ -5,6 +5,22 @@ use syntax::F_lParseProgram;
 use std::{collections::HashMap, fmt::Write};
 
 #[derive(Clone, Debug)]
+enum EValue {
+    I8(i8),
+    U8(u8),
+    I16(i16),
+    U16(u16),
+    I32(i32),
+    U32(u32),
+    I64(i64),
+    U64(u64),
+    F32(f32),
+    F64(f64),
+    Ptr(*mut u8),
+    Str(&'static str), // ou (ptr, len) si tu veux
+}
+
+#[derive(Clone, Debug)]
 enum EIrInstr {
     // Data manipulation
     PushI64(i64),               // number
@@ -21,7 +37,7 @@ enum EIrInstr {
     // Stack manipulation
     Dup,                        // dup
     Swap,                       // swap
-    DumpStr,                    // dump_str
+    Puts,                       // puts
     Dump,                       // dump
 
     // Syscalls
@@ -56,7 +72,7 @@ impl CAsmBuilder {
     fn F_cNew() -> Self {
         let mut l_cBuilder = CAsmBuilder { 
             //l_sData: String::from("section .data\n    dump_buf: resb 21\n"),
-            l_sData: String::from("section .data\n    dump_buf: resb 21\n    data_stack: resq 4096\n"),
+            l_sData: String::from("section .bss\n    dump_buf: resb 21\n    data_stack: resq 4096\nsection .data\n"),
             l_sCode: String::new(),
             l_iFuncCode: String::new(),
             l_iStrCount: 0,
@@ -102,6 +118,10 @@ impl CAsmBuilder {
         let _ = writeln!(self.l_iFuncCode, "    {:8} {}", l_sInstr, l_sArgs);
     }
 
+    fn vEmitFuncLines(&mut self, l_sLines: &str) {
+        let _ = writeln!(self.l_iFuncCode, "\n{}\n", l_sLines);
+    }
+
     fn F_vEmitExit(&mut self) {
         self.F_vEmitInstr("mov", "rax, 60");
         self.F_vEmitInstr("xor", "rdi, rdi");
@@ -113,122 +133,220 @@ impl CAsmBuilder {
     }
 
     fn F_vEmitDumpFunction(&mut self) {
-        self.F_vEmitFuncLine("dump_value:");
-        self.F_vEmitFuncInstr("cmp", "rax, 0x1000");
-        self.F_vEmitFuncInstr("jb", ".print_int");
-        
-        self.F_vEmitFuncLine(".print_str:");
-        self.F_vEmitFuncInstr("mov", "rsi, rax");
-        self.F_vEmitFuncInstr("xor", "rdx, rdx");
-        self.F_vEmitFuncLine(".strlen_loop:");
-        self.F_vEmitFuncInstr("cmp", "byte [rsi + rdx], 0");
-        self.F_vEmitFuncInstr("je", ".strlen_done");
-        self.F_vEmitFuncInstr("inc", "rdx");
-        self.F_vEmitFuncInstr("jmp", ".strlen_loop");
-        self.F_vEmitFuncLine(".strlen_done:");
-        self.F_vEmitFuncInstr("mov", "rax, 1");
-        self.F_vEmitFuncInstr("mov", "rdi, 1");
-        self.F_vEmitFuncInstr("syscall", "");
-        self.F_vEmitFuncInstr("ret", "");
-        
-        self.F_vEmitFuncLine(".print_int:");
-        self.F_vEmitFuncInstr("mov", "rcx, 10");
-        self.F_vEmitFuncInstr("mov", "rdi, dump_buf");
-        self.F_vEmitFuncInstr("add", "rdi, 20");
-        self.F_vEmitFuncInstr("mov", "byte [rdi], 10");
-        self.F_vEmitFuncInstr("dec", "rdi");
-        self.F_vEmitFuncInstr("xor", "r8, r8");
-        self.F_vEmitFuncInstr("test", "rax, rax");
-        self.F_vEmitFuncInstr("jns", ".positive");
-        self.F_vEmitFuncInstr("neg", "rax");
-        self.F_vEmitFuncInstr("mov", "r8, 1");
-        self.F_vEmitFuncLine(".positive:");
-        self.F_vEmitFuncLine(".convert_loop:");
-        self.F_vEmitFuncInstr("xor", "rdx, rdx");
-        self.F_vEmitFuncInstr("div", "rcx");
-        self.F_vEmitFuncInstr("add", "dl, '0'");
-        self.F_vEmitFuncInstr("mov", "[rdi], dl");
-        self.F_vEmitFuncInstr("dec", "rdi");
-        self.F_vEmitFuncInstr("test", "rax, rax");
-        self.F_vEmitFuncInstr("jnz", ".convert_loop");
-        self.F_vEmitFuncInstr("test", "r8, r8");
-        self.F_vEmitFuncInstr("jz", ".write");
-        self.F_vEmitFuncInstr("mov", "byte [rdi], '-'");
-        self.F_vEmitFuncInstr("dec", "rdi");
-        self.F_vEmitFuncLine(".write:");
-        self.F_vEmitFuncInstr("inc", "rdi");
-        self.F_vEmitFuncInstr("mov", "rdx, 21");
-        self.F_vEmitFuncInstr("mov", "rsi, dump_buf");
-        self.F_vEmitFuncInstr("sub", "rdx, rdi");
-        self.F_vEmitFuncInstr("add", "rdx, rsi");
-        self.F_vEmitFuncInstr("mov", "rsi, rdi");
-        self.F_vEmitFuncInstr("mov", "rax, 1");
-        self.F_vEmitFuncInstr("mov", "rdi, 1");
-        self.F_vEmitFuncInstr("syscall", "");
-        self.F_vEmitFuncInstr("ret", "");
+        self.vEmitFuncLines("dump_i:
+        sub     rsp, 40
+        xor     r9d, r9d
+        test    rdi, rdi
+        jns     .L2
+        neg     rdi
+        mov     r9d, 1
+.L2:
+        mov  rsi, 7378697629483820647
+        mov     ecx, 32
+.L3:
+        mov     rax, rdi
+        mov     r8, rcx
+        sub     rcx, 1
+        imul    rsi
+        mov     rax, rdi
+        sar     rax, 63
+        sar     rdx, 2
+        sub     rdx, rax
+        lea     rax, [rdx+rdx*4]
+        add     rax, rax
+        sub     rdi, rax
+        add     edi, 48
+        mov     BYTE [rsp+rcx], dil
+        mov     rdi, rdx
+        test    rdx, rdx
+        jne     .L3
+        test    r9d, r9d
+        je      .L4
+        mov     BYTE [rsp-2+r8], 45
+        lea     rcx, [r8-2]
+.L4:
+    mov     rdx, 32
+    lea     rsi, [rsp+rcx]
+    sub     rdx, rcx
+    mov     rax, 1
+    mov     rdi, 1
+    syscall
+    add     rsp, 40
+    ret
+
+
+dump_str:
+    push    rbx
+    mov     rbx, rdi
+    xor     rax, rax
+.loop:
+    cmp     byte [rdi + rax], 0
+    je      .done
+    inc     rax
+    jmp     .loop
+.done:
+    mov     rdx, rax
+    mov     rsi, rbx
+    mov     rax, 1
+    mov     rdi, 1
+    pop     rbx
+    syscall
+    ret
+");
     }
 
-    fn F_vEmitSyscall0(&mut self) {
-        self.F_vEmitInstr("pop", "rax");
+    fn F_vEmitSyscall3(&mut self, l_bInProc: bool) {
+        if l_bInProc {
+            self.F_vEmitFuncInstr("mov", "rax, [r15 + 24]");
+            self.F_vEmitFuncInstr("mov", "rdi, [r15 + 16]");
+            self.F_vEmitFuncInstr("mov", "rsi, [r15 + 8]");
+            self.F_vEmitFuncInstr("mov", "rdx, [r15]");
+            self.F_vEmitFuncInstr("add", "r15, 32");
+            self.F_vEmitFuncInstr("syscall", "");
+            self.F_vEmitFuncInstr("sub", "r15, 8");
+            self.F_vEmitFuncInstr("mov", "[r15], rax");
+            return;
+        }
+        self.F_vEmitInstr("mov", "rax, [r15 + 24]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 16]");
+        self.F_vEmitInstr("mov", "rsi, [r15 + 8]");
+        self.F_vEmitInstr("mov", "rdx, [r15]");
+        self.F_vEmitInstr("add", "r15, 32");
         self.F_vEmitInstr("syscall", "");
-        self.F_vEmitInstr("push", "rax");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
     }
 
-    fn F_vEmitSyscall1(&mut self) {
-        self.F_vEmitInstr("pop", "rax");
-        self.F_vEmitInstr("pop", "rdi");
+    fn F_vEmitSyscall0(&mut self, l_bInProc: bool) {
+        if l_bInProc {
+            self.F_vEmitFuncInstr("mov", "rax, [r15]");
+            self.F_vEmitFuncInstr("add", "r15, 8");
+            self.F_vEmitFuncInstr("syscall", "");
+            self.F_vEmitFuncInstr("sub", "r15, 8");
+            self.F_vEmitFuncInstr("mov", "[r15], rax");
+            return;
+        }
+        self.F_vEmitInstr("mov", "rax, [r15]");
+        self.F_vEmitInstr("add", "r15, 8");
         self.F_vEmitInstr("syscall", "");
-        self.F_vEmitInstr("push", "rax");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
     }
 
-    fn F_vEmitSyscall2(&mut self) {
-        self.F_vEmitInstr("pop", "rax");
-        self.F_vEmitInstr("pop", "rdi");
-        self.F_vEmitInstr("pop", "rsi");
+    fn F_vEmitSyscall1(&mut self, l_bInProc: bool) {
+        if l_bInProc {
+            self.F_vEmitFuncInstr("mov", "rax, [r15 + 8]");
+            self.F_vEmitFuncInstr("mov", "rdi, [r15]");
+            self.F_vEmitFuncInstr("add", "r15, 16");
+            self.F_vEmitFuncInstr("syscall", "");
+            self.F_vEmitFuncInstr("sub", "r15, 8");
+            self.F_vEmitFuncInstr("mov", "[r15], rax");
+            return;
+        }
+        self.F_vEmitInstr("mov", "rax, [r15 + 8]");
+        self.F_vEmitInstr("mov", "rdi, [r15]");
+        self.F_vEmitInstr("add", "r15, 16");
         self.F_vEmitInstr("syscall", "");
-        self.F_vEmitInstr("push", "rax");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
     }
 
-    fn F_vEmitSyscall3(&mut self) {
-        self.F_vEmitInstr("pop", "rdx");
-        self.F_vEmitInstr("pop", "rsi");
-        self.F_vEmitInstr("pop", "rdi");
-        self.F_vEmitInstr("pop", "rax");
+    fn F_vEmitSyscall2(&mut self, l_bInProc: bool) {
+        if l_bInProc {
+            self.F_vEmitFuncInstr("mov", "rax, [r15 + 16]");
+            self.F_vEmitFuncInstr("mov", "rdi, [r15 + 8]");
+            self.F_vEmitFuncInstr("mov", "rsi, [r15]");
+            self.F_vEmitFuncInstr("add", "r15, 24");
+            self.F_vEmitFuncInstr("syscall", "");
+            self.F_vEmitFuncInstr("sub", "r15, 8");
+            self.F_vEmitFuncInstr("mov", "[r15], rax");
+            return;
+        }
+        self.F_vEmitInstr("mov", "rax, [r15 + 16]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 8]");
+        self.F_vEmitInstr("mov", "rsi, [r15]");
+        self.F_vEmitInstr("add", "r15, 24");
         self.F_vEmitInstr("syscall", "");
-        self.F_vEmitInstr("push", "rax");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
     }
 
-    fn F_vEmitSyscall4(&mut self) {
-        self.F_vEmitInstr("pop", "rax");
-        self.F_vEmitInstr("pop", "rdi");
-        self.F_vEmitInstr("pop", "rsi");
-        self.F_vEmitInstr("pop", "rdx");
-        self.F_vEmitInstr("pop", "r10");
+    fn F_vEmitSyscall4(&mut self, l_bInProc: bool) {
+        if l_bInProc {
+            self.F_vEmitFuncInstr("mov", "rax, [r15 + 32]");
+            self.F_vEmitFuncInstr("mov", "rdi, [r15 + 24]");
+            self.F_vEmitFuncInstr("mov", "rsi, [r15 + 16]");
+            self.F_vEmitFuncInstr("mov", "rdx, [r15 + 8]");
+            self.F_vEmitFuncInstr("mov", "r10, [r15]");
+            self.F_vEmitFuncInstr("add", "r15, 40");
+            self.F_vEmitFuncInstr("syscall", "");
+            self.F_vEmitFuncInstr("sub", "r15, 8");
+            self.F_vEmitFuncInstr("mov", "[r15], rax");
+            return;
+        }
+        self.F_vEmitInstr("mov", "rax, [r15 + 32]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 24]");
+        self.F_vEmitInstr("mov", "rsi, [r15 + 16]");
+        self.F_vEmitInstr("mov", "rdx, [r15 + 8]");
+        self.F_vEmitInstr("mov", "r10, [r15]");
+        self.F_vEmitInstr("add", "r15, 40");
         self.F_vEmitInstr("syscall", "");
-        self.F_vEmitInstr("push", "rax");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
     }
 
-    fn F_vEmitSyscall5(&mut self) {
-        self.F_vEmitInstr("pop", "rax");
-        self.F_vEmitInstr("pop", "rdi");
-        self.F_vEmitInstr("pop", "rsi");
-        self.F_vEmitInstr("pop", "rdx");
-        self.F_vEmitInstr("pop", "r10");
-        self.F_vEmitInstr("pop", "r8");
+    fn F_vEmitSyscall5(&mut self, l_bInProc: bool) {
+        if l_bInProc {
+            self.F_vEmitFuncInstr("mov", "rax, [r15 + 40]");
+            self.F_vEmitFuncInstr("mov", "rdi, [r15 + 32]");
+            self.F_vEmitFuncInstr("mov", "rsi, [r15 + 24]");
+            self.F_vEmitFuncInstr("mov", "rdx, [r15 + 16]");
+            self.F_vEmitFuncInstr("mov", "r10, [r15 + 8]");
+            self.F_vEmitFuncInstr("mov", "r8, [r15]");
+            self.F_vEmitFuncInstr("add", "r15, 48");
+            self.F_vEmitFuncInstr("syscall", "");
+            self.F_vEmitFuncInstr("sub", "r15, 8");
+            self.F_vEmitFuncInstr("mov", "[r15], rax");
+            return;
+        }
+        self.F_vEmitInstr("mov", "rax, [r15 + 40]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 32]");
+        self.F_vEmitInstr("mov", "rsi, [r15 + 24]");
+        self.F_vEmitInstr("mov", "rdx, [r15 + 16]");
+        self.F_vEmitInstr("mov", "r10, [r15 + 8]");
+        self.F_vEmitInstr("mov", "r8, [r15]");
+        self.F_vEmitInstr("add", "r15, 48");
         self.F_vEmitInstr("syscall", "");
-        self.F_vEmitInstr("push", "rax");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
     }
 
-    fn F_vEmitSyscall6(&mut self) {
-        self.F_vEmitInstr("pop", "r9");
-        self.F_vEmitInstr("pop", "r8");
-        self.F_vEmitInstr("pop", "r10");
-        self.F_vEmitInstr("pop", "rdx");
-        self.F_vEmitInstr("pop", "rsi");
-        self.F_vEmitInstr("pop", "rdi");
-        self.F_vEmitInstr("pop", "rax");
+    fn F_vEmitSyscall6(&mut self, l_bInProc: bool) {
+        if l_bInProc {
+            self.F_vEmitFuncInstr("mov", "rax, [r15 + 48]");
+            self.F_vEmitFuncInstr("mov", "rdi, [r15 + 40]");
+            self.F_vEmitFuncInstr("mov", "rsi, [r15 + 32]");
+            self.F_vEmitFuncInstr("mov", "rdx, [r15 + 24]");
+            self.F_vEmitFuncInstr("mov", "r10, [r15 + 16]");
+            self.F_vEmitFuncInstr("mov", "r8, [r15 + 8]");
+            self.F_vEmitFuncInstr("mov", "r9, [r15]");
+            self.F_vEmitFuncInstr("add", "r15, 56");
+            self.F_vEmitFuncInstr("syscall", "");
+            self.F_vEmitFuncInstr("sub", "r15, 8");
+            self.F_vEmitFuncInstr("mov", "[r15], rax");
+            return;
+        }
+        self.F_vEmitInstr("mov", "rax, [r15 + 48]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 40]");
+        self.F_vEmitInstr("mov", "rsi, [r15 + 32]");
+        self.F_vEmitInstr("mov", "rdx, [r15 + 24]");
+        self.F_vEmitInstr("mov", "r10, [r15 + 16]");
+        self.F_vEmitInstr("mov", "r8, [r15 + 8]");
+        self.F_vEmitInstr("mov", "r9, [r15]");
+        self.F_vEmitInstr("add", "r15, 56");
         self.F_vEmitInstr("syscall", "");
-        self.F_vEmitInstr("push", "rax");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
     }
 
 }
@@ -273,10 +391,12 @@ impl CStackToX86_64 {
                 EIrInstr::PushI64(l_iVal) => {
                     if l_bInProc {
                         l_cAsm.F_vEmitFuncInstr("sub", "r15, 8");
-                        l_cAsm.F_vEmitFuncInstr("mov", &format!("qword [r15], {}", l_iVal));
+                        l_cAsm.F_vEmitFuncInstr("mov", &format!("rax, {}", l_iVal));
+                        l_cAsm.F_vEmitFuncInstr("mov", "qword [r15], rax");
                     } else {
                         l_cAsm.F_vEmitInstr("sub", "r15, 8");
-                        l_cAsm.F_vEmitInstr("mov", &format!("qword [r15], {}", l_iVal));
+                        l_cAsm.F_vEmitInstr("mov", &format!("rax, {}", l_iVal));
+                        l_cAsm.F_vEmitInstr("mov", "qword [r15], rax");
                     }
                 }
                 EIrInstr::PushStr(l_sStr) => {
@@ -287,18 +407,6 @@ impl CStackToX86_64 {
                     } else {
                         l_cAsm.F_vEmitInstr("sub", "r15, 8");
                         l_cAsm.F_vEmitInstr("mov", &format!("qword [r15], {}", l_sLabel));
-                    }
-                }
-                EIrInstr::PushStrRef(l_sStr) => {
-                    let (l_sLabel, l_iLen) = l_cAsm.F_sAddString(l_sStr);
-                    if l_bInProc {
-                        l_cAsm.F_vEmitFuncInstr("sub", "r15, 16");
-                        l_cAsm.F_vEmitFuncInstr("mov", &format!("qword [r15 + 8], {}", l_sLabel));
-                        l_cAsm.F_vEmitFuncInstr("mov", &format!("qword [r15], {}", l_iLen));
-                    } else {
-                        l_cAsm.F_vEmitInstr("sub", "r15, 16");
-                        l_cAsm.F_vEmitInstr("mov", &format!("qword [r15 + 8], {}", l_sLabel));
-                        l_cAsm.F_vEmitInstr("mov", &format!("qword [r15], {}", l_iLen));
                     }
                 }
                 EIrInstr::AddI64 => {
@@ -351,15 +459,27 @@ impl CStackToX86_64 {
                         l_cAsm.F_vEmitInstr("mov", "[r15], rax");
                     }
                 }
-                EIrInstr::DumpStr | EIrInstr::Dump => {
+                EIrInstr::Dump => {
                     if l_bInProc {
-                        l_cAsm.F_vEmitFuncInstr("mov", "rax, [r15]");
+                        l_cAsm.F_vEmitFuncInstr("mov", "rdi, [r15]");
                         l_cAsm.F_vEmitFuncInstr("add", "r15, 8");
-                        l_cAsm.F_vEmitFuncInstr("call", "dump_value");
+                        l_cAsm.F_vEmitFuncInstr("call", "dump_i");
                     } else {
-                        l_cAsm.F_vEmitInstr("mov", "rax, [r15]");
+                        l_cAsm.F_vEmitInstr("mov", "rdi, [r15]");
                         l_cAsm.F_vEmitInstr("add", "r15, 8");
-                        l_cAsm.F_vEmitInstr("call", "dump_value");
+                        l_cAsm.F_vEmitInstr("call", "dump_i");
+                    }
+                }
+                EIrInstr::Puts => {
+                    if l_bInProc {
+                        l_cAsm.F_vEmitFuncInstr("mov", "rdi, [r15]");
+                        l_cAsm.F_vEmitFuncInstr("add", "r15, 8");
+                        l_cAsm.F_vEmitFuncInstr("call", "dump_str");
+                    } else {
+                        //l_cAsm.F_vEmitInstr("mov", "rax, [r15 + 8]");
+                        l_cAsm.F_vEmitInstr("mov", "rdi, [r15]");
+                        l_cAsm.F_vEmitInstr("add", "r15, 8");
+                        l_cAsm.F_vEmitInstr("call", "dump_str");
                     }
                 }
                 EIrInstr::Call(l_sName) => {
@@ -376,13 +496,13 @@ impl CStackToX86_64 {
                         l_cAsm.F_vEmitInstr("ret", "");
                     }
                 }
-                EIrInstr::Syscall0 => l_cAsm.F_vEmitSyscall0(),
-                EIrInstr::Syscall1 => l_cAsm.F_vEmitSyscall1(),
-                EIrInstr::Syscall2 => l_cAsm.F_vEmitSyscall2(),
-                EIrInstr::Syscall3 => l_cAsm.F_vEmitSyscall3(),
-                EIrInstr::Syscall4 => l_cAsm.F_vEmitSyscall4(),
-                EIrInstr::Syscall5 => l_cAsm.F_vEmitSyscall5(),
-                EIrInstr::Syscall6 => l_cAsm.F_vEmitSyscall6(),
+                EIrInstr::Syscall0 => l_cAsm.F_vEmitSyscall0(l_bInProc),
+                EIrInstr::Syscall1 => l_cAsm.F_vEmitSyscall1(l_bInProc),
+                EIrInstr::Syscall2 => l_cAsm.F_vEmitSyscall2(l_bInProc),
+                EIrInstr::Syscall3 => l_cAsm.F_vEmitSyscall3(l_bInProc),
+                EIrInstr::Syscall4 => l_cAsm.F_vEmitSyscall4(l_bInProc),
+                EIrInstr::Syscall5 => l_cAsm.F_vEmitSyscall5(l_bInProc),
+                EIrInstr::Syscall6 => l_cAsm.F_vEmitSyscall6(l_bInProc),
                 EIrInstr::Proc(_, _) => {}
                 _ => { panic!("Instruction non supportee"); }
             }
@@ -415,7 +535,6 @@ impl CStackToInterpreter {
         }
 
         Self::F_vExecuteProc("main", &l_hmProcs, &mut l_lDataStack, &mut l_lCallStack)?;
-        //println!("Stack finale: {:?}", l_lDataStack);
         Ok(())
     }
 
@@ -465,7 +584,7 @@ impl CStackToInterpreter {
                     let l_iTop = *l_lDataStack.last().ok_or("Stack underflow")?;
                     l_lDataStack.push(l_iTop);
                 }
-                EIrInstr::DumpStr => {
+                EIrInstr::Puts => {
                     let l_iLen = l_lDataStack.pop().ok_or("Stack underflow")? as usize;
                     let l_pBuf = l_lDataStack.pop().ok_or("Stack underflow")? as *const u8;
                     let l_sReconstructed = unsafe {
@@ -475,10 +594,14 @@ impl CStackToInterpreter {
                 }
                 EIrInstr::Dump => {
                     let l_iVal = l_lDataStack.pop().ok_or("Stack underflow")?;
-                    print!("{}\n", l_iVal);
+                    print!("{}", l_iVal);
                 }
                 EIrInstr::Call(l_sTarget) => {
-                    Self::F_vExecuteProc(l_sTarget, l_hmProcs, l_lDataStack, l_lCallStack)?;
+                    //Self::F_vExecuteProc(l_sTarget, l_hmProcs, l_lDataStack, l_lCallStack)?;
+                    let mut l_lLocalStack = Vec::new();
+                    Self::F_vExecuteProc(l_sTarget, l_hmProcs, &mut l_lLocalStack, l_lCallStack)?;
+                    l_lDataStack.append(&mut l_lLocalStack);
+
                 }
                 EIrInstr::Ret => {
                     return Ok(());
@@ -558,45 +681,6 @@ fn main() {
     let l_sFilename = &args[1];
     let l_sCode = std::fs::read_to_string(l_sFilename)
         .expect("Erreur lecture fichier");
-
-    /*let l_lProgram = vec![
-        EIrInstr::Proc("N", vec![
-            EIrInstr::PushI64(69),
-            EIrInstr::Ret,
-        ]),
-        EIrInstr::Proc("M", vec![
-            EIrInstr::PushI64(420),
-            EIrInstr::Ret,
-        ]),
-        EIrInstr::Proc("K", vec![
-            EIrInstr::Call("N"),
-            EIrInstr::Call("M"),
-            EIrInstr::AddI64,
-            EIrInstr::Ret,
-        ]),
-        EIrInstr::Proc("main", vec![
-            EIrInstr::Call("M"),
-            EIrInstr::Dump,
-            EIrInstr::PushStr("\nHello\nd"),
-            EIrInstr::DumpStr,
-            EIrInstr::Ret,
-        ]),
-    ];
-
-    println!("=== INTERPRETATION ===");
-    match CStackToInterpreter::F_vInterpret(&l_lProgram) {
-        Ok(_) => {},
-        Err(l_sErr) => eprintln!("{}", l_sErr),
-    }
-
-    println!("\n=== COMPILATION X86_64 ===");
-    match CStackToX86_64::F_sCompile(&l_lProgram) {
-        Ok(l_sAsm) => {
-            std::fs::write("out.asm", l_sAsm).expect("Erreur ecriture fichier");
-            //println!("Code genere dans out.asm");
-        },
-        Err(l_sErr) => eprintln!("{}", l_sErr),
-    }*/
 
     match F_lParseProgram(l_sCode.as_str()) {
         Ok(l_lProgram) => {
