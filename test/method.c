@@ -3,19 +3,29 @@
 #include<sys/mman.h>
 #include<errno.h>
 
-void dump_i(uint64_t x)
+void dump_i(int64_t x)
 {
     char buf[32];
-    size_t buf_sz = 1;
+    size_t pos = sizeof(buf);
+
+    int sign = 0;
+    if (x < 0) 
+    {
+        sign = 1;
+        x = -x;
+    }
 
     do {
-        buf[sizeof(buf)-buf_sz-1] = x % 10 + '0';
-        buf_sz++;
+        buf[--pos] = x % 10 + '0';
         x /= 10;
     } while (x);
 
-    write(1, &buf[sizeof(buf)-buf_sz], buf_sz);
+    if (sign)
+        buf[--pos] = '-';
+
+    write(1, &buf[pos], sizeof(buf) - pos);
 }
+
 
 void dump_str(const char* s)
 {
@@ -55,11 +65,11 @@ void dump(void* p)
 
 int main(void)
 {
-    dump_i(1234567890);
-    dump_str("Hello, World!");
+    dump_i(-12345678910);
+    //dump_str("Hello, World!");
     
-    dump((void*)100000);
-    dump((void*)"Goodbye, World!");
+    //dump((void*)100000);
+    //dump((void*)"Goodbye, World!");
     
     return 0;
 }

@@ -36,7 +36,7 @@ fi
 mkdir -p "$l_sBuildDir"
 
 #echo "Assemblage: $l_sAsmFile -> $l_sObjectFile" without warnings
-nasm -f elf64 -o "$l_sObjectFile" "$l_sAsmFile" 2>/dev/null
+nasm -f elf64 -o "$l_sObjectFile" "$l_sAsmFile" #2>/dev/null
 
 #echo "Linkage: $l_sObjectFile -> $l_sExecutable"
 ld "$l_sObjectFile" -o "$l_sExecutable"

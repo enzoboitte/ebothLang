@@ -5,6 +5,22 @@ use syntax::F_lParseProgram;
 use std::{collections::HashMap, fmt::Write};
 
 #[derive(Clone, Debug)]
+enum EValue {
+    I8(i8),
+    U8(u8),
+    I16(i16),
+    U16(u16),
+    I32(i32),
+    U32(u32),
+    I64(i64),
+    U64(u64),
+    F32(f32),
+    F64(f64),
+    Ptr(*mut u8),
+    Str(&'static str), // ou (ptr, len) si tu veux
+}
+
+#[derive(Clone, Debug)]
 enum EIrInstr {
     // Data manipulation
     PushI64(i64),               // number
@@ -56,7 +72,7 @@ impl CAsmBuilder {
     fn F_cNew() -> Self {
         let mut l_cBuilder = CAsmBuilder { 
             //l_sData: String::from("section .data\n    dump_buf: resb 21\n"),
-            l_sData: String::from("section .data\n    dump_buf: resb 21\n    data_stack: resq 4096\n"),
+            l_sData: String::from("section .bss\n    dump_buf: resb 21\n    data_stack: resq 4096\nsection .data\n"),
             l_sCode: String::new(),
             l_iFuncCode: String::new(),
             l_iStrCount: 0,
@@ -118,32 +134,46 @@ impl CAsmBuilder {
 
     fn F_vEmitDumpFunction(&mut self) {
         self.vEmitFuncLines("dump_i:
-    mov     r8, -3689348814741910323
-    sub     rsp, 40
-    lea     rcx, [rsp+30]
+        sub     rsp, 40
+        xor     r9d, r9d
+        test    rdi, rdi
+        jns     .L2
+        neg     rdi
+        mov     r9d, 1
 .L2:
-    mov     rax, rdi
-    mul     r8
-    mov     rax, rdi
-    shr     rdx, 3
-    lea     rsi, [rdx+rdx*4]
-    add     rsi, rsi
-    sub     rax, rsi
-    mov     rsi, rcx
-    sub     rcx, 1
-    add     eax, 48
-    mov     byte [rcx+1], al
-    mov     rax, rdi
-    mov     rdi, rdx
-    cmp     rax, 9
-    ja      .L2
-    lea     rdx, [rsp+32]
-    sub     rdx, rsi
+        mov  rsi, 7378697629483820647
+        mov     ecx, 32
+.L3:
+        mov     rax, rdi
+        mov     r8, rcx
+        sub     rcx, 1
+        imul    rsi
+        mov     rax, rdi
+        sar     rax, 63
+        sar     rdx, 2
+        sub     rdx, rax
+        lea     rax, [rdx+rdx*4]
+        add     rax, rax
+        sub     rdi, rax
+        add     edi, 48
+        mov     BYTE [rsp+rcx], dil
+        mov     rdi, rdx
+        test    rdx, rdx
+        jne     .L3
+        test    r9d, r9d
+        je      .L4
+        mov     BYTE [rsp-2+r8], 45
+        lea     rcx, [r8-2]
+.L4:
+    mov     rdx, 32
+    lea     rsi, [rsp+rcx]
+    sub     rdx, rcx
     mov     rax, 1
     mov     rdi, 1
     syscall
     add     rsp, 40
     ret
+
 
 dump_str:
     push    rbx
@@ -361,10 +391,12 @@ impl CStackToX86_64 {
                 EIrInstr::PushI64(l_iVal) => {
                     if l_bInProc {
                         l_cAsm.F_vEmitFuncInstr("sub", "r15, 8");
-                        l_cAsm.F_vEmitFuncInstr("mov", &format!("qword [r15], {}", l_iVal));
+                        l_cAsm.F_vEmitFuncInstr("mov", &format!("rax, {}", l_iVal));
+                        l_cAsm.F_vEmitFuncInstr("mov", "qword [r15], rax");
                     } else {
                         l_cAsm.F_vEmitInstr("sub", "r15, 8");
-                        l_cAsm.F_vEmitInstr("mov", &format!("qword [r15], {}", l_iVal));
+                        l_cAsm.F_vEmitInstr("mov", &format!("rax, {}", l_iVal));
+                        l_cAsm.F_vEmitInstr("mov", "qword [r15], rax");
                     }
                 }
                 EIrInstr::PushStr(l_sStr) => {
@@ -377,33 +409,6 @@ impl CStackToX86_64 {
                         l_cAsm.F_vEmitInstr("mov", &format!("qword [r15], {}", l_sLabel));
                     }
                 }
-                /*EIrInstr::PushStr(l_sStr) => {
-                    let (l_sLabel, l_iLen) = l_cAsm.F_sAddString(l_sStr);
-                    if l_bInProc {
-                        l_cAsm.F_vEmitFuncInstr("sub", "r15, 8");
-                        l_cAsm.F_vEmitFuncInstr("mov", &format!("qword [r15], {}", l_sLabel));
-                        l_cAsm.F_vEmitFuncInstr("sub", "r15, 8");
-                        l_cAsm.F_vEmitFuncInstr("mov", &format!("qword [r15], {}", l_iLen));
-                    } else {
-                        l_cAsm.F_vEmitInstr("sub", "r15, 8");
-                        l_cAsm.F_vEmitInstr("mov", &format!("qword [r15], {}", l_sLabel));
-                        l_cAsm.F_vEmitInstr("sub", "r15, 8");
-                        l_cAsm.F_vEmitInstr("mov", &format!("qword [r15], {}", l_iLen));
-                    }
-                }*/
-
-                /*EIrInstr::PushStr(l_sStr)|EIrInstr::PushStrRef(l_sStr) => {
-                    let (l_sLabel, l_iLen) = l_cAsm.F_sAddString(l_sStr);
-                    if l_bInProc {
-                        l_cAsm.F_vEmitFuncInstr("sub", "r15, 16");
-                        l_cAsm.F_vEmitFuncInstr("mov", &format!("qword [r15 + 8], {}", l_sLabel));
-                        l_cAsm.F_vEmitFuncInstr("mov", &format!("qword [r15], {}", l_iLen));
-                    } else {
-                        l_cAsm.F_vEmitInstr("sub", "r15, 16");
-                        l_cAsm.F_vEmitInstr("mov", &format!("qword [r15 + 8], {}", l_sLabel));
-                        l_cAsm.F_vEmitInstr("mov", &format!("qword [r15], {}", l_iLen));
-                    }
-                }*/
                 EIrInstr::AddI64 => {
                     if l_bInProc {
                         l_cAsm.F_vEmitFuncInstr("mov", "rax, [r15]");
@@ -466,12 +471,7 @@ impl CStackToX86_64 {
                     }
                 }
                 EIrInstr::Puts => {
-                    // pile
-                    // 0: str
-                    // 8: len
-                    // using dump_value
                     if l_bInProc {
-                        //l_cAsm.F_vEmitFuncInstr("mov", "rax, [r15 + 8]");
                         l_cAsm.F_vEmitFuncInstr("mov", "rdi, [r15]");
                         l_cAsm.F_vEmitFuncInstr("add", "r15, 8");
                         l_cAsm.F_vEmitFuncInstr("call", "dump_str");
@@ -535,7 +535,6 @@ impl CStackToInterpreter {
         }
 
         Self::F_vExecuteProc("main", &l_hmProcs, &mut l_lDataStack, &mut l_lCallStack)?;
-        //println!("Stack finale: {:?}", l_lDataStack);
         Ok(())
     }
 
@@ -682,45 +681,6 @@ fn main() {
     let l_sFilename = &args[1];
     let l_sCode = std::fs::read_to_string(l_sFilename)
         .expect("Erreur lecture fichier");
-
-    /*let l_lProgram = vec![
-        EIrInstr::Proc("N", vec![
-            EIrInstr::PushI64(69),
-            EIrInstr::Ret,
-        ]),
-        EIrInstr::Proc("M", vec![
-            EIrInstr::PushI64(420),
-            EIrInstr::Ret,
-        ]),
-        EIrInstr::Proc("K", vec![
-            EIrInstr::Call("N"),
-            EIrInstr::Call("M"),
-            EIrInstr::AddI64,
-            EIrInstr::Ret,
-        ]),
-        EIrInstr::Proc("main", vec![
-            EIrInstr::Call("M"),
-            EIrInstr::Dump,
-            EIrInstr::PushStr("\nHello\nd"),
-            EIrInstr::DumpStr,
-            EIrInstr::Ret,
-        ]),
-    ];
-
-    println!("=== INTERPRETATION ===");
-    match CStackToInterpreter::F_vInterpret(&l_lProgram) {
-        Ok(_) => {},
-        Err(l_sErr) => eprintln!("{}", l_sErr),
-    }
-
-    println!("\n=== COMPILATION X86_64 ===");
-    match CStackToX86_64::F_sCompile(&l_lProgram) {
-        Ok(l_sAsm) => {
-            std::fs::write("out.asm", l_sAsm).expect("Erreur ecriture fichier");
-            //println!("Code genere dans out.asm");
-        },
-        Err(l_sErr) => eprintln!("{}", l_sErr),
-    }*/
 
     match F_lParseProgram(l_sCode.as_str()) {
         Ok(l_lProgram) => {
