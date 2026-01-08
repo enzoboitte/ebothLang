@@ -68,6 +68,10 @@ proc_calc:
     add      r15, 8
     mov      [r15], rax
     ret      
+proc_CONST_B:
+    sub      r15, 8
+    mov      qword [r15], 200
+    ret      
 proc_main:
     sub      r15, 8
     mov      qword [r15], str_0
@@ -83,10 +87,14 @@ proc_main:
     mov      rax, [r15]
     add      r15, 8
     call     dump_value
+    call     proc_print
     ret      
-proc_CONST_B:
+proc_print:
     sub      r15, 8
-    mov      qword [r15], 200
+    mov      qword [r15], 13456
+    mov      rax, [r15]
+    add      r15, 8
+    call     dump_value
     ret      
 
 global _start

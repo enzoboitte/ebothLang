@@ -168,7 +168,7 @@ impl CAsmBuilder {
         self.F_vEmitFuncInstr("ret", "");
     }
 
-    fn F_vEmitSyscall0(&mut self) {
+    /*fn F_vEmitSyscall0(&mut self) {
         self.F_vEmitInstr("pop", "rax");
         self.F_vEmitInstr("syscall", "");
         self.F_vEmitInstr("push", "rax");
@@ -229,6 +229,83 @@ impl CAsmBuilder {
         self.F_vEmitInstr("pop", "rax");
         self.F_vEmitInstr("syscall", "");
         self.F_vEmitInstr("push", "rax");
+    }*/
+
+    fn F_vEmitSyscall0(&mut self) {
+        self.F_vEmitInstr("mov", "rax, [r15]");
+        self.F_vEmitInstr("add", "r15, 8");
+        self.F_vEmitInstr("syscall", "");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
+    }
+
+    fn F_vEmitSyscall1(&mut self) {
+        self.F_vEmitInstr("mov", "rdi, [r15]");
+        self.F_vEmitInstr("mov", "rax, [r15 + 8]");
+        self.F_vEmitInstr("add", "r15, 16");
+        self.F_vEmitInstr("syscall", "");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
+    }
+
+    fn F_vEmitSyscall2(&mut self) {
+        self.F_vEmitInstr("mov", "rsi, [r15]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 8]");
+        self.F_vEmitInstr("mov", "rax, [r15 + 16]");
+        self.F_vEmitInstr("add", "r15, 24");
+        self.F_vEmitInstr("syscall", "");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
+    }
+
+    fn F_vEmitSyscall3(&mut self) {
+        self.F_vEmitInstr("mov", "rdx, [r15]");
+        self.F_vEmitInstr("mov", "rsi, [r15 + 8]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 16]");
+        self.F_vEmitInstr("mov", "rax, [r15 + 24]");
+        self.F_vEmitInstr("add", "r15, 32");
+        self.F_vEmitInstr("syscall", "");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
+    }
+
+    fn F_vEmitSyscall4(&mut self) {
+        self.F_vEmitInstr("mov", "r10, [r15]");
+        self.F_vEmitInstr("mov", "rdx, [r15 + 8]");
+        self.F_vEmitInstr("mov", "rsi, [r15 + 16]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 24]");
+        self.F_vEmitInstr("mov", "rax, [r15 + 32]");
+        self.F_vEmitInstr("add", "r15, 40");
+        self.F_vEmitInstr("syscall", "");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
+    }
+
+    fn F_vEmitSyscall5(&mut self) {
+        self.F_vEmitInstr("mov", "r8, [r15]");
+        self.F_vEmitInstr("mov", "r10, [r15 + 8]");
+        self.F_vEmitInstr("mov", "rdx, [r15 + 16]");
+        self.F_vEmitInstr("mov", "rsi, [r15 + 24]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 32]");
+        self.F_vEmitInstr("mov", "rax, [r15 + 40]");
+        self.F_vEmitInstr("add", "r15, 48");
+        self.F_vEmitInstr("syscall", "");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
+    }
+
+    fn F_vEmitSyscall6(&mut self) {
+        self.F_vEmitInstr("mov", "r9, [r15]");
+        self.F_vEmitInstr("mov", "r8, [r15 + 8]");
+        self.F_vEmitInstr("mov", "r10, [r15 + 16]");
+        self.F_vEmitInstr("mov", "rdx, [r15 + 24]");
+        self.F_vEmitInstr("mov", "rsi, [r15 + 32]");
+        self.F_vEmitInstr("mov", "rdi, [r15 + 40]");
+        self.F_vEmitInstr("mov", "rax, [r15 + 48]");
+        self.F_vEmitInstr("add", "r15, 56");
+        self.F_vEmitInstr("syscall", "");
+        self.F_vEmitInstr("sub", "r15, 8");
+        self.F_vEmitInstr("mov", "[r15], rax");
     }
 
 }
@@ -478,7 +555,11 @@ impl CStackToInterpreter {
                     print!("{}\n", l_iVal);
                 }
                 EIrInstr::Call(l_sTarget) => {
-                    Self::F_vExecuteProc(l_sTarget, l_hmProcs, l_lDataStack, l_lCallStack)?;
+                    //Self::F_vExecuteProc(l_sTarget, l_hmProcs, l_lDataStack, l_lCallStack)?;
+                    let mut l_lLocalStack = Vec::new();
+                    Self::F_vExecuteProc(l_sTarget, l_hmProcs, &mut l_lLocalStack, l_lCallStack)?;
+                    l_lDataStack.append(&mut l_lLocalStack);
+
                 }
                 EIrInstr::Ret => {
                     return Ok(());
