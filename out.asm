@@ -1,38 +1,54 @@
-section .data
+section .bss
     dump_buf: resb 21
     data_stack: resq 4096
+section .data
     str_0: db "Calcul: ", 0
     str_1: db "", 10, "Fin", 10, "", 0
+    str_2: db "", 10, "", 10, "Done", 10, "", 0
 
 section .text
 
 dump_i:
-    mov     r8, -3689348814741910323
-    sub     rsp, 40
-    lea     rcx, [rsp+30]
+        sub     rsp, 40
+        xor     r9d, r9d
+        test    rdi, rdi
+        jns     .L2
+        neg     rdi
+        mov     r9d, 1
 .L2:
-    mov     rax, rdi
-    mul     r8
-    mov     rax, rdi
-    shr     rdx, 3
-    lea     rsi, [rdx+rdx*4]
-    add     rsi, rsi
-    sub     rax, rsi
-    mov     rsi, rcx
-    sub     rcx, 1
-    add     eax, 48
-    mov     byte [rcx+1], al
-    mov     rax, rdi
-    mov     rdi, rdx
-    cmp     rax, 9
-    ja      .L2
-    lea     rdx, [rsp+32]
-    sub     rdx, rsi
+        mov  rsi, 7378697629483820647
+        mov     ecx, 32
+.L3:
+        mov     rax, rdi
+        mov     r8, rcx
+        sub     rcx, 1
+        imul    rsi
+        mov     rax, rdi
+        sar     rax, 63
+        sar     rdx, 2
+        sub     rdx, rax
+        lea     rax, [rdx+rdx*4]
+        add     rax, rax
+        sub     rdi, rax
+        add     edi, 48
+        mov     BYTE [rsp+rcx], dil
+        mov     rdi, rdx
+        test    rdx, rdx
+        jne     .L3
+        test    r9d, r9d
+        je      .L4
+        mov     BYTE [rsp-2+r8], 45
+        lea     rcx, [r8-2]
+.L4:
+    mov     rdx, 32
+    lea     rsi, [rsp+rcx]
+    sub     rdx, rcx
     mov     rax, 1
     mov     rdi, 1
     syscall
     add     rsp, 40
     ret
+
 
 dump_str:
     push    rbx
@@ -53,29 +69,6 @@ dump_str:
     ret
 
 
-proc_CONST_A:
-    sub      r15, 8
-    mov      qword [r15], 100
-    ret      
-proc_calc:
-    call     proc_CONST_A
-    call     proc_CONST_B
-    mov      rax, [r15]
-    add      rax, [r15 + 8]
-    add      r15, 8
-    mov      [r15], rax
-    ret      
-proc_CONST_B:
-    sub      r15, 8
-    mov      qword [r15], 200
-    ret      
-proc_print:
-    sub      r15, 8
-    mov      qword [r15], 1234567891
-    mov      rdi, [r15]
-    add      r15, 8
-    call     dump_i
-    ret      
 proc_main:
     sub      r15, 8
     mov      qword [r15], str_0
@@ -92,6 +85,44 @@ proc_main:
     add      r15, 8
     call     dump_str
     call     proc_print
+    sub      r15, 8
+    mov      qword [r15], str_2
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_str
+    ret      
+proc_calc:
+    call     proc_CONST_A
+    call     proc_CONST_B
+    mov      rax, [r15]
+    add      rax, [r15 + 8]
+    add      r15, 8
+    mov      [r15], rax
+    ret      
+proc_CONST_A:
+    sub      r15, 8
+    mov      rax, 100
+    mov      qword [r15], rax
+    ret      
+proc_CONST_B:
+    sub      r15, 8
+    mov      rax, 200
+    mov      qword [r15], rax
+    ret      
+proc_print:
+    sub      r15, 8
+    mov      rax, 10
+    mov      qword [r15], rax
+    sub      r15, 8
+    mov      rax, 11
+    mov      qword [r15], rax
+    mov      rax, [r15 + 8]
+    sub      rax, [r15]
+    add      r15, 8
+    mov      [r15], rax
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_i
     ret      
 
 global _start
