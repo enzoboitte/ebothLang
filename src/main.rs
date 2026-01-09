@@ -5,6 +5,24 @@ use syntax::F_lParseProgram;
 use std::{collections::HashMap, fmt::Write};
 
 #[derive(Clone, Debug)]
+enum EType {
+    I8,
+    U8,
+    I16,
+    U16,
+    I32,
+    U32,
+    I64,
+    U64,
+    F32,
+    F64,
+    Ptr,
+    Str,
+    Bool,
+    Void,
+}
+
+#[derive(Clone, Debug)]
 enum EValue {
     I8(i8),
     U8(u8),
@@ -16,8 +34,9 @@ enum EValue {
     U64(u64),
     F32(f32),
     F64(f64),
-    Ptr(*mut u8),
-    Str(&'static str), // ou (ptr, len) si tu veux
+    Ptr(u64),
+    Str(&'static str),
+    Bool(bool),
 }
 
 #[derive(Clone, Debug)]
@@ -25,7 +44,6 @@ enum EIrInstr {
     // Data manipulation
     PushI64(i64),               // number
     PushStr(&'static str),      // "..."
-    PushStrRef(&'static str),   // "..."
 
     // Arithmetic
     AddI64,                     // +
@@ -50,14 +68,12 @@ enum EIrInstr {
     Syscall6,                   // syscall6 
 
     // Control flow (not implemented in this example)
-    Label(String),              // not implemented
-    Jump(String),               // not implemented
-    JumpIfZero(String),         // not implemented
     Call(&'static str),         // [name_proc/const]
     Ret,                        // end (for proc)
+    RetType,                    // -- [type] (for proc)
 
 
-    Proc(&'static str, Vec<EIrInstr>),  // proc [name] in ... end
+    Proc(&'static str, Vec<EIrInstr>, Vec<(EType)>),  // proc [name] in ... end
     Const(&'static str, Vec<EIrInstr>), // const [name] in ... end
 }
 
@@ -362,7 +378,7 @@ impl CStackToX86_64 {
         l_cAsm.F_vEmitDumpFunction();
 
         for l_cInstr in l_lIr {
-            if let EIrInstr::Proc(l_sName, l_lBody) = l_cInstr {
+            if let EIrInstr::Proc(l_sName, l_lBody, l_lTypes) = l_cInstr {
                 if *l_sName == "main" {
                     l_bHasMain = true;
                 }
@@ -503,7 +519,8 @@ impl CStackToX86_64 {
                 EIrInstr::Syscall4 => l_cAsm.F_vEmitSyscall4(l_bInProc),
                 EIrInstr::Syscall5 => l_cAsm.F_vEmitSyscall5(l_bInProc),
                 EIrInstr::Syscall6 => l_cAsm.F_vEmitSyscall6(l_bInProc),
-                EIrInstr::Proc(_, _) => {}
+                EIrInstr::Proc(_, _, _) => { panic!("Instruction non supportee in statement"); }
+                EIrInstr::Const(_, _) => { panic!("Instruction non supportee in statement"); }
                 _ => { panic!("Instruction non supportee"); }
             }
         }
@@ -520,7 +537,7 @@ impl CStackToInterpreter {
         let mut l_bHasMain = false;
 
         for l_cInstr in l_lIr {
-            if let EIrInstr::Proc(l_sName, l_lBody) = l_cInstr {
+            if let EIrInstr::Proc(l_sName, l_lBody, l_lTypes) = l_cInstr {
                 if *l_sName == "main" {
                     l_bHasMain = true;
                 }
@@ -553,12 +570,6 @@ impl CStackToInterpreter {
                     l_lDataStack.push(l_iVal);
                 }
                 EIrInstr::PushStr(l_sStr) => {
-                    let l_pBuf = l_sStr.as_ptr() as i64;
-                    let l_iLen = l_sStr.len() as i64;
-                    l_lDataStack.push(l_pBuf);
-                    l_lDataStack.push(l_iLen);
-                }
-                EIrInstr::PushStrRef(l_sStr) => {
                     let l_pBuf = l_sStr.as_ptr() as i64;
                     let l_iLen = l_sStr.len() as i64;
                     l_lDataStack.push(l_pBuf);
@@ -663,6 +674,8 @@ impl CStackToInterpreter {
                     let l_iRet = unsafe { libc::syscall(l_iSysno, l_iArg1, l_iArg2, l_iArg3, l_iArg4, l_iArg5, l_iArg6) };
                     l_lDataStack.push(l_iRet as i64);
                 }
+                EIrInstr::Proc(_, _, _) => { panic!("Instruction non supportee in statement"); }
+                EIrInstr::Const(_, _) => { panic!("Instruction non supportee in statement"); }
                 _ => {}
             }
         }
@@ -686,11 +699,12 @@ fn main() {
         Ok(l_lProgram) => {
             println!("Programme parsé!");
 
-            // print toutes les instruction
+            //=== IR ===
+            println!("\n=== IR ===");
             for l_cInstr in &l_lProgram {
                 // si l'instruction est une proc/const, afficher son nom et son corps
                 match l_cInstr {
-                    EIrInstr::Proc(l_sName, l_lBody) => {
+                    EIrInstr::Proc(l_sName, l_lBody, l_lTypes) => {
                         println!("Proc {}:", l_sName);
                         for l_cBodyInstr in l_lBody {
                             println!("    {:?}", l_cBodyInstr);

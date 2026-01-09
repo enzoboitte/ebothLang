@@ -1,5 +1,7 @@
 #![allow(nonstandard_style)]
-use crate::EIrInstr;
+use std::ptr::null;
+
+use crate::{EIrInstr, EType};
 
 #[derive(Debug, Clone, PartialEq)]
 enum EToken {
@@ -34,6 +36,8 @@ enum EToken {
     F64,
     Str,
     Bool,
+
+    RetType,
 }
 
 struct CLexer {
@@ -189,6 +193,7 @@ impl CLexer {
                 Some(l_cChar) if l_cChar.is_alphabetic() || l_cChar == '_' => {
                     let l_sIdent = self.F_sReadIdent();
                     let l_eToken = match l_sIdent.as_str() {
+                        "ret" => EToken::RetType,
                         "proc" => EToken::Proc,
                         "const" => EToken::Const,
                         "in" => EToken::In,
@@ -242,10 +247,27 @@ impl CParser {
         l_eToken
     }
 
+    fn F_eBack(&mut self) {
+        if self.l_iPos > 0 {
+            self.l_iPos -= 1;
+        }
+    }
+
     fn F_bExpect(&mut self, l_eExpected: EToken) -> Result<(), String> {
         match self.F_eAdvance() {
             Some(l_eToken) if l_eToken == &l_eExpected => Ok(()),
             Some(l_eToken) => Err(format!("Expected {:?}, got {:?}", l_eExpected, l_eToken)),
+            None => Err("Unexpected end of input".to_string()),
+        }
+    }
+
+    fn F_lParseType(&mut self) -> Result<EType, String> {
+        match self.F_eAdvance() {
+            Some(EToken::I64) => Ok(EType::I64),
+            Some(EToken::F64) => Ok(EType::F64),
+            Some(EToken::Str) => Ok(EType::Str),
+            Some(EToken::Bool) => Ok(EType::Bool),
+            Some(l_eToken) => Ok(EType::Void),//Err(format!("Expected type, got {:?}", l_eToken)),
             None => Err("Unexpected end of input".to_string()),
         }
     }
@@ -259,6 +281,22 @@ impl CParser {
         };
 
         // parameters parsing can be added
+        let mut l_lParams = vec![];
+        while let Ok(l_eType) = self.F_lParseType() {
+            if let EType::Void = l_eType {
+                self.F_eBack();
+                break;
+            }
+            l_lParams.push(l_eType);
+        }
+
+        // same for parameters but for return types
+        if let Some(EToken::RetType) = self.F_ePeek() {
+            self.F_eAdvance();
+            // we can parse return types here if needed
+            // get type
+            self.F_eAdvance();
+        }
 
         self.F_bExpect(EToken::In)?;
 
@@ -273,7 +311,7 @@ impl CParser {
         l_lBody.push(EIrInstr::Ret);
 
         let l_sNameStatic = Box::leak(l_sName.into_boxed_str());
-        Ok(EIrInstr::Proc(l_sNameStatic, l_lBody))
+        Ok(EIrInstr::Proc(l_sNameStatic, l_lBody, l_lParams))
     }
 
     fn F_lParseConst(&mut self) -> Result<EIrInstr, String> {
@@ -297,7 +335,7 @@ impl CParser {
         l_lBody.push(EIrInstr::Ret);
 
         let l_sNameStatic = Box::leak(l_sName.into_boxed_str());
-        Ok(EIrInstr::Proc(l_sNameStatic, l_lBody))
+        Ok(EIrInstr::Proc(l_sNameStatic, l_lBody, Vec::new()))
     }
 
     fn F_eParseInstr(&mut self) -> Result<EIrInstr, String> {

@@ -1,0 +1,7 @@
+proc add i64 i64 ret i64 in
+    +
+end
+
+proc main in
+    42 58 add dump
+end
