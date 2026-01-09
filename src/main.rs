@@ -4,7 +4,7 @@ use syntax::F_lParseProgram;
 
 use std::{collections::HashMap, fmt::Write};
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 enum EType {
     I8,
     U8,
@@ -73,7 +73,7 @@ enum EIrInstr {
     RetType,                    // -- [type] (for proc)
 
 
-    Proc(&'static str, Vec<EIrInstr>, Vec<(EType)>),  // proc [name] in ... end
+    Proc(&'static str, Vec<EIrInstr>, Vec<EType>, EType),  // proc [name] in ... end
     Const(&'static str, Vec<EIrInstr>), // const [name] in ... end
 }
 
@@ -365,6 +365,197 @@ dump_str:
         self.F_vEmitInstr("mov", "[r15], rax");
     }
 
+    // generate cast for EType
+    pub fn F_vEmitCast(&mut self, l_eFrom: &EType, l_eTo: &EType, l_bInProc: bool) {
+        /*
+        Architecture flottante x86_64
+
+Registres: xmm0 à xmm15 (128 bits chacun).
+
+​
+
+    F32 (simple précision) : 32 bits bas
+
+    F64 (double précision) : 64 bits bas
+
+    ​
+
+Instructions arithmétiques SSE2
+Double précision (f64)
+
+text
+addsd xmm0, xmm1    # xmm0 += xmm1
+subsd xmm0, xmm1    # xmm0 -= xmm1
+mulsd xmm0, xmm1    # xmm0 *= xmm1
+divsd xmm0, xmm1    # xmm0 /= xmm1
+sqrtsd xmm0, xmm1   # xmm0 = sqrt(xmm1)
+
+Simple précision (f32)
+
+text
+addss xmm0, xmm1    # xmm0 += xmm1
+subss xmm0, xmm1    # xmm0 -= xmm1
+mulss xmm0, xmm1    # xmm0 *= xmm1
+divss xmm0, xmm1    # xmm0 /= xmm1
+sqrtss xmm0, xmm1   # xmm0 = sqrt(xmm1)
+
+Transfert mémoire ↔ registres
+
+text
+# Charger depuis pile (mémoire)
+movsd xmm0, [r15]        # charge f64
+movss xmm0, [r15]        # charge f32
+
+# Stocker vers pile
+movsd [r15], xmm0        # stocke f64
+movss [r15], xmm0        # stocke f32
+
+# Copie entre registres XMM
+movsd xmm0, xmm1
+movaps xmm0, xmm1        # alternative alignée
+        */
+        if !l_bInProc { return; }
+    
+        match (l_eFrom, l_eTo) {
+            (EType::I64, EType::F64) => {
+                self.F_vEmitFuncInstr("cvtsi2sd", "xmm0, qword [r15]");
+                self.F_vEmitFuncInstr("movsd", "[r15], xmm0");
+            },
+            (EType::I32, EType::F64) => {
+                self.F_vEmitFuncInstr("cvtsi2sd", "xmm0, dword [r15]");
+                self.F_vEmitFuncInstr("add", "r15, 4");
+                self.F_vEmitFuncInstr("movsd", "[r15], xmm0");
+            },
+            (EType::I64, EType::F32) => {
+                self.F_vEmitFuncInstr("cvtsi2ss", "xmm0, qword [r15]");
+                self.F_vEmitFuncInstr("add", "r15, 4");
+                self.F_vEmitFuncInstr("movss", "[r15], xmm0");
+            },
+            (EType::I32, EType::F32) => {
+                self.F_vEmitFuncInstr("cvtsi2ss", "xmm0, dword [r15]");
+                self.F_vEmitFuncInstr("movss", "[r15], xmm0");
+            },
+            (EType::F64, EType::I64) => {
+                self.F_vEmitFuncInstr("movsd", "xmm0, [r15]");
+                self.F_vEmitFuncInstr("cvttsd2si", "rax, xmm0");
+                self.F_vEmitFuncInstr("mov", "[r15], rax");
+            },
+            (EType::F64, EType::I32) => {
+                self.F_vEmitFuncInstr("movsd", "xmm0, [r15]");
+                self.F_vEmitFuncInstr("cvttsd2si", "eax, xmm0");
+                self.F_vEmitFuncInstr("sub", "r15, 4");
+                self.F_vEmitFuncInstr("mov", "dword [r15], eax");
+            },
+            (EType::F32, EType::I64) => {
+                self.F_vEmitFuncInstr("movss", "xmm0, [r15]");
+                self.F_vEmitFuncInstr("cvttss2si", "rax, xmm0");
+                self.F_vEmitFuncInstr("sub", "r15, 4");
+                self.F_vEmitFuncInstr("mov", "[r15], rax");
+            },
+            (EType::F32, EType::I32) => {
+                self.F_vEmitFuncInstr("movss", "xmm0, [r15]");
+                self.F_vEmitFuncInstr("cvttss2si", "eax, xmm0");
+                self.F_vEmitFuncInstr("mov", "dword [r15], eax");
+            },
+            (EType::F32, EType::F64) => {
+                self.F_vEmitFuncInstr("movss", "xmm0, [r15]");
+                self.F_vEmitFuncInstr("cvtss2sd", "xmm0, xmm0");
+                self.F_vEmitFuncInstr("add", "r15, 4");
+                self.F_vEmitFuncInstr("movsd", "[r15], xmm0");
+            },
+            (EType::F64, EType::F32) => {
+                self.F_vEmitFuncInstr("movsd", "xmm0, [r15]");
+                self.F_vEmitFuncInstr("cvtsd2ss", "xmm0, xmm0");
+                self.F_vEmitFuncInstr("sub", "r15, 4");
+                self.F_vEmitFuncInstr("movss", "[r15], xmm0");
+            },
+            (EType::I32, EType::I64) | (EType::I16, EType::I64) | (EType::I8, EType::I64) => {
+                let l_sSize = match l_eFrom {
+                    EType::I32 => "dword",
+                    EType::I16 => "word",
+                    EType::I8 => "byte",
+                    _ => unreachable!(),
+                };
+                self.F_vEmitFuncInstr("movsx", &format!("rax, {} [r15]", l_sSize));
+                self.F_vEmitFuncInstr("add", "r15, 4");
+                self.F_vEmitFuncInstr("mov", "[r15], rax");
+            },
+            (EType::U32, EType::I64) | (EType::U32, EType::U64) | 
+            (EType::U16, EType::I64) | (EType::U16, EType::U64) |
+            (EType::U8, EType::I64) | (EType::U8, EType::U64) => {
+                let l_sSize = match l_eFrom {
+                    EType::U32 => "dword",
+                    EType::U16 => "word",
+                    EType::U8 => "byte",
+                    _ => unreachable!(),
+                };
+                self.F_vEmitFuncInstr("movzx", &format!("rax, {} [r15]", l_sSize));
+                self.F_vEmitFuncInstr("add", "r15, 4");
+                self.F_vEmitFuncInstr("mov", "[r15], rax");
+            },
+            (EType::I64, EType::I32) | (EType::U64, EType::I32) => {
+                self.F_vEmitFuncInstr("mov", "eax, dword [r15]");
+                self.F_vEmitFuncInstr("sub", "r15, 4");
+                self.F_vEmitFuncInstr("mov", "dword [r15], eax");
+            },
+            (EType::I32, EType::I16) | (EType::I32, EType::U16) => {
+                self.F_vEmitFuncInstr("mov", "ax, word [r15]");
+                self.F_vEmitFuncInstr("sub", "r15, 6");
+                self.F_vEmitFuncInstr("mov", "word [r15], ax");
+            },
+            (EType::I32, EType::I8) | (EType::I32, EType::U8) |
+            (EType::I16, EType::I8) | (EType::I16, EType::U8) => {
+                self.F_vEmitFuncInstr("mov", "al, byte [r15]");
+                let l_iOffset = match l_eFrom {
+                    EType::I32 => 3,
+                    EType::I16 => 1,
+                    _ => unreachable!(),
+                };
+                self.F_vEmitFuncInstr("sub", &format!("r15, {}", l_iOffset));
+                self.F_vEmitFuncInstr("mov", "byte [r15], al");
+            },
+            (EType::I16, EType::I32) | (EType::I8, EType::I32) => {
+                let l_sSize = if *l_eFrom == EType::I16 { "word" } else { "byte" };
+                self.F_vEmitFuncInstr("movsx", &format!("eax, {} [r15]", l_sSize));
+                let l_iOffset = if *l_eFrom == EType::I16 { 2 } else { 3 };
+                self.F_vEmitFuncInstr("add", &format!("r15, {}", l_iOffset));
+                self.F_vEmitFuncInstr("mov", "dword [r15], eax");
+            },
+            (EType::U16, EType::I32) | (EType::U16, EType::U32) |
+            (EType::U8, EType::I32) | (EType::U8, EType::U32) => {
+                let l_sSize = if matches!(l_eFrom, EType::U16) { "word" } else { "byte" };
+                self.F_vEmitFuncInstr("movzx", &format!("eax, {} [r15]", l_sSize));
+                let l_iOffset = if matches!(l_eFrom, EType::U16) { 2 } else { 3 };
+                self.F_vEmitFuncInstr("add", &format!("r15, {}", l_iOffset));
+                self.F_vEmitFuncInstr("mov", "dword [r15], eax");
+            },
+            (EType::I8, EType::I16) | (EType::U8, EType::I16) | (EType::U8, EType::U16) => {
+                let l_sInstr = if *l_eFrom == EType::I8 { "movsx" } else { "movzx" };
+                self.F_vEmitFuncInstr(l_sInstr, "ax, byte [r15]");
+                self.F_vEmitFuncInstr("add", "r15, 1");
+                self.F_vEmitFuncInstr("mov", "word [r15], ax");
+            },
+            (EType::Bool, EType::I32) | (EType::Bool, EType::I64) => {
+                self.F_vEmitFuncInstr("movzx", "rax, byte [r15]");
+                let l_iSize = if *l_eTo == EType::I64 { 7 } else { 3 };
+                self.F_vEmitFuncInstr("add", &format!("r15, {}", l_iSize));
+                let l_sInstr = if *l_eTo == EType::I64 { "mov" } else { "mov dword" };
+                self.F_vEmitFuncInstr(l_sInstr, "[r15], rax");
+            },
+            // i64 to i8
+            (EType::I64, EType::I8) => {
+                let l_sSize = if *l_eFrom == EType::I64 { "qword" } else { "dword" };
+                self.F_vEmitFuncInstr("mov", "al, 0");
+                self.F_vEmitFuncInstr("cmp", &format!("{} [r15], 0", l_sSize));
+                self.F_vEmitFuncInstr("setne", "al");
+                self.F_vEmitFuncInstr("add", "r15, 1");
+                self.F_vEmitFuncInstr("mov", "byte [r15], al");
+            },
+            (l_eA, l_eB) if l_eA == l_eB => {},
+            _ => {
+            },
+        }
+    }
 }
 
 struct CStackToX86_64;
@@ -373,18 +564,21 @@ impl CStackToX86_64 {
     fn F_sCompile(l_lIr: &[EIrInstr]) -> Result<String, String> {
         let mut l_cAsm = CAsmBuilder::F_cNew();
         let mut l_hmProcs: HashMap<&'static str, &Vec<EIrInstr>> = HashMap::new();
+        let mut l_hmInfoProc: HashMap<&'static str, EIrInstr> = HashMap::new();
         let mut l_bHasMain = false;
 
         l_cAsm.F_vEmitDumpFunction();
 
         for l_cInstr in l_lIr {
-            if let EIrInstr::Proc(l_sName, l_lBody, l_lTypes) = l_cInstr {
+            if let EIrInstr::Proc(l_sName, l_lBody, l_lTypes, l_eRetType) = l_cInstr {
                 if *l_sName == "main" {
                     l_bHasMain = true;
                 }
                 l_hmProcs.insert(l_sName, l_lBody);
+                l_hmInfoProc.insert(l_sName, l_cInstr.clone());
             } else if let EIrInstr::Const(l_sName, l_lBody) = l_cInstr {
                 l_hmProcs.insert(l_sName, l_lBody);
+                l_hmInfoProc.insert(l_sName, EIrInstr::Proc(l_sName, l_lBody.clone(), vec![EType::Void], EType::Void));
             }
         }
 
@@ -394,14 +588,16 @@ impl CStackToX86_64 {
 
         for (l_sName, l_lBody) in &l_hmProcs {
             l_cAsm.F_vEmitFuncLine(&format!("proc_{}:", l_sName));
-            Self::F_vCompileInstrs(&mut l_cAsm, l_lBody, true);
+            // get IrInstruct by name from l_hmInfoProc
+            let l_mhInfo = l_hmInfoProc.get(l_sName).unwrap();
+            Self::F_vCompileInstrs(&mut l_cAsm, l_lBody, true, l_mhInfo.clone());
         }
 
         l_cAsm.F_vEmitExit();
         Ok(l_cAsm.F_sBuild())
     }
 
-    fn F_vCompileInstrs(l_cAsm: &mut CAsmBuilder, l_lInstrs: &[EIrInstr], l_bInProc: bool) {
+    fn F_vCompileInstrs(l_cAsm: &mut CAsmBuilder, l_lInstrs: &[EIrInstr], l_bInProc: bool, l_mhInfo: EIrInstr) {
         for l_cInstr in l_lInstrs {
             match *l_cInstr {
                 EIrInstr::PushI64(l_iVal) => {
@@ -506,6 +702,37 @@ impl CStackToX86_64 {
                     }
                 }
                 EIrInstr::Ret => {
+                    let l_eRetType = match l_mhInfo {
+                        EIrInstr::Proc(_, _, _, ref l_eRetType) => l_eRetType.clone(),
+                        _ => EType::Void,
+                    };
+                    match l_eRetType {
+                        l_eType => { 
+                            println!("Generating return for type: {:?}", l_eType);
+                            // caster la valeur de retour i64 -> type de retour
+                            if l_bInProc {
+                                l_cAsm.F_vEmitCast(&EType::I64, &l_eType, true);
+                                /*for l_sLine in l_cTmpAsm.F_sBuild().lines() {
+                                    l_cAsm.F_vEmitFuncInstr(l_sLine.split_whitespace().next().unwrap(), &l_sLine.split_whitespace().skip(1).collect::<Vec<&str>>().join(" "));
+                                }*/
+                            } else {
+                                l_cAsm.F_vEmitCast(&EType::I64, &l_eType, false);
+                                /*for l_sLine in l_cTmpAsm.F_sBuild().lines() {
+                                    l_cAsm.F_vEmitInstr(l_sLine.split_whitespace().next().unwrap(), &l_sLine.split_whitespace().skip(1).collect::<Vec<&str>>().join(" "));
+                                }*/
+                            }
+                        }
+                        EType::Void => {
+                            // retirer la valeur de retour de la stack
+                            if l_bInProc {
+                                l_cAsm.F_vEmitFuncInstr("add", "r15, 8");
+                            } else {
+                                l_cAsm.F_vEmitInstr("add", "r15, 8");
+                            }
+                        }
+                    }
+
+
                     if l_bInProc {
                         l_cAsm.F_vEmitFuncInstr("ret", "");
                     } else {
@@ -519,7 +746,7 @@ impl CStackToX86_64 {
                 EIrInstr::Syscall4 => l_cAsm.F_vEmitSyscall4(l_bInProc),
                 EIrInstr::Syscall5 => l_cAsm.F_vEmitSyscall5(l_bInProc),
                 EIrInstr::Syscall6 => l_cAsm.F_vEmitSyscall6(l_bInProc),
-                EIrInstr::Proc(_, _, _) => { panic!("Instruction non supportee in statement"); }
+                EIrInstr::Proc(_, _, _, _) => { panic!("Instruction non supportee in statement"); }
                 EIrInstr::Const(_, _) => { panic!("Instruction non supportee in statement"); }
                 _ => { panic!("Instruction non supportee"); }
             }
@@ -534,16 +761,19 @@ impl CStackToInterpreter {
         let mut l_lDataStack: Vec<i64> = Vec::new();
         let mut l_lCallStack: Vec<usize> = Vec::new();
         let mut l_hmProcs: HashMap<&'static str, &Vec<EIrInstr>> = HashMap::new();
+        let mut l_hmInfoProc: HashMap<&'static str, EIrInstr> = HashMap::new();
         let mut l_bHasMain = false;
 
         for l_cInstr in l_lIr {
-            if let EIrInstr::Proc(l_sName, l_lBody, l_lTypes) = l_cInstr {
+            if let EIrInstr::Proc(l_sName, l_lBody, l_lTypes, l_eRetType) = l_cInstr {
                 if *l_sName == "main" {
                     l_bHasMain = true;
                 }
                 l_hmProcs.insert(l_sName, l_lBody);
+                l_hmInfoProc.insert(l_sName, l_cInstr.clone());
             } else if let EIrInstr::Const(l_sName, l_lBody) = l_cInstr {
                 l_hmProcs.insert(l_sName, l_lBody);
+                l_hmInfoProc.insert(l_sName, EIrInstr::Proc(l_sName, l_lBody.clone(), vec![EType::Void], EType::Void));
             }
         }
 
@@ -551,13 +781,14 @@ impl CStackToInterpreter {
             return Err("Erreur: proc main non declaree".to_string());
         }
 
-        Self::F_vExecuteProc("main", &l_hmProcs, &mut l_lDataStack, &mut l_lCallStack)?;
+        Self::F_vExecuteProc("main", &l_hmProcs, &l_hmInfoProc, &mut l_lDataStack, &mut l_lCallStack)?;
         Ok(())
     }
 
     fn F_vExecuteProc(
-        l_sName: &str, 
+        l_sName: &str,
         l_hmProcs: &HashMap<&'static str, &Vec<EIrInstr>>,
+        l_hmInfo: &HashMap<&'static str, EIrInstr>,
         l_lDataStack: &mut Vec<i64>,
         l_lCallStack: &mut Vec<usize>
     ) -> Result<(), String> {
@@ -565,6 +796,7 @@ impl CStackToInterpreter {
             .ok_or_else(|| format!("Proc {} non trouvee", l_sName))?;
 
         for l_cInstr in l_lBody.iter() {
+            let l_mhInfo = l_hmInfo.get(l_sName).unwrap();
             match *l_cInstr {
                 EIrInstr::PushI64(l_iVal) => {
                     l_lDataStack.push(l_iVal);
@@ -610,11 +842,27 @@ impl CStackToInterpreter {
                 EIrInstr::Call(l_sTarget) => {
                     //Self::F_vExecuteProc(l_sTarget, l_hmProcs, l_lDataStack, l_lCallStack)?;
                     let mut l_lLocalStack = Vec::new();
-                    Self::F_vExecuteProc(l_sTarget, l_hmProcs, &mut l_lLocalStack, l_lCallStack)?;
+                    Self::F_vExecuteProc(l_sTarget, l_hmProcs, l_hmInfo, &mut l_lLocalStack, l_lCallStack)?;
                     l_lDataStack.append(&mut l_lLocalStack);
 
                 }
                 EIrInstr::Ret => {
+                    let l_eRetType = match l_mhInfo {
+                        EIrInstr::Proc(_, _, _, l_eRetType) => l_eRetType.clone(),
+                        _ => EType::Void,
+                    };
+                    match l_eRetType {
+                        EType::Void => {
+                            // retirer la valeur de retour de la stack
+                            l_lDataStack.pop().ok_or("Stack underflow")?;
+                        }
+                        l_eType => { 
+                            // cast tous les type de i64 -> type de retour
+                            let l_iRetVal = l_lDataStack.pop().ok_or("Stack underflow")?;
+                            // ici on pourrait faire des conversions selon l_eType si necessaire
+                            l_lDataStack.push(l_iRetVal);
+                        }
+                    }
                     return Ok(());
                 }
 
@@ -674,7 +922,7 @@ impl CStackToInterpreter {
                     let l_iRet = unsafe { libc::syscall(l_iSysno, l_iArg1, l_iArg2, l_iArg3, l_iArg4, l_iArg5, l_iArg6) };
                     l_lDataStack.push(l_iRet as i64);
                 }
-                EIrInstr::Proc(_, _, _) => { panic!("Instruction non supportee in statement"); }
+                EIrInstr::Proc(_, _, _, _) => { panic!("Instruction non supportee in statement"); }
                 EIrInstr::Const(_, _) => { panic!("Instruction non supportee in statement"); }
                 _ => {}
             }
@@ -704,8 +952,16 @@ fn main() {
             for l_cInstr in &l_lProgram {
                 // si l'instruction est une proc/const, afficher son nom et son corps
                 match l_cInstr {
-                    EIrInstr::Proc(l_sName, l_lBody, l_lTypes) => {
-                        println!("Proc {}:", l_sName);
+                    EIrInstr::Proc(l_sName, l_lBody, l_lTypes, l_eRetType) => {
+                        //proc name (param)
+                        print!("Proc {} (", l_sName);
+                        for (i, l_cType) in l_lTypes.iter().enumerate() {
+                            if i > 0 {
+                                print!(", ");
+                            }
+                            print!("{:?}", l_cType);
+                        }
+                        println!(") -> {:?}", l_eRetType);
                         for l_cBodyInstr in l_lBody {
                             println!("    {:?}", l_cBodyInstr);
                         }

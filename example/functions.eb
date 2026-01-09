@@ -1,5 +1,5 @@
-proc add i64 i64 ret i64 in
-    +
+proc add i64 i64 ret i32 in
+    20 233
 end
 
 proc main in

@@ -2,6 +2,9 @@ section .bss
     dump_buf: resb 21
     data_stack: resq 4096
 section .data
+    str_0: db "Calcul: ", 0
+    str_1: db "", 10, "Fin", 10, "", 0
+    str_2: db "", 10, "", 10, "Done", 10, "", 0
 
 section .text
 
@@ -66,20 +69,57 @@ dump_str:
     ret
 
 
-proc_add:
+proc_calc:
+    call     proc_CONST_A
+    call     proc_CONST_B
     mov      rax, [r15]
     add      rax, [r15 + 8]
     add      r15, 8
     mov      [r15], rax
     ret      
+proc_CONST_B:
+    sub      r15, 8
+    mov      rax, 200
+    mov      qword [r15], rax
+    ret      
+proc_CONST_A:
+    sub      r15, 8
+    mov      rax, 100
+    mov      qword [r15], rax
+    ret      
 proc_main:
     sub      r15, 8
-    mov      rax, 42
+    mov      qword [r15], str_0
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_str
+    call     proc_calc
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_i
+    sub      r15, 8
+    mov      qword [r15], str_1
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_str
+    call     proc_print
+    sub      r15, 8
+    mov      qword [r15], str_2
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_str
+    ret      
+proc_print:
+    sub      r15, 8
+    mov      rax, 10
     mov      qword [r15], rax
     sub      r15, 8
-    mov      rax, 58
+    mov      rax, 11
     mov      qword [r15], rax
-    call     proc_add
+    mov      rax, [r15 + 8]
+    sub      rax, [r15]
+    add      r15, 8
+    mov      [r15], rax
     mov      rdi, [r15]
     add      r15, 8
     call     dump_i
