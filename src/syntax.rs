@@ -307,7 +307,7 @@ impl CParser {
             _ => return Err("Expected proc name".to_string()),
         };
 
-        // parameters parsing can be added
+        /*/ parameters parsing can be added
         let mut l_lParams = vec![];
         while let Ok(l_eType) = self.F_lParseType() {
             if let EType::Void = l_eType {
@@ -324,7 +324,7 @@ impl CParser {
             // we can parse return types here if needed
             // get type
             l_eRetType = self.F_lParseType()?;
-        }
+        }*/
 
         self.F_bExpect(EToken::In)?;
 
@@ -339,7 +339,8 @@ impl CParser {
         l_lBody.push(EIrInstr::Ret);
 
         let l_sNameStatic = Box::leak(l_sName.into_boxed_str());
-        Ok(EIrInstr::Proc(l_sNameStatic, l_lBody, l_lParams, l_eRetType))
+        //l_lParams, l_eRetType))
+        Ok(EIrInstr::Proc(l_sNameStatic, l_lBody, Vec::new(), EType::Void))
     }
 
     fn F_lParseConst(&mut self) -> Result<EIrInstr, String> {

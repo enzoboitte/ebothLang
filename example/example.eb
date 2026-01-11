@@ -6,7 +6,7 @@ proc calc in
 end
 
 proc print in
-    10 11 - dump
+    10 11 - dump 0
 end
 
 proc main in
@@ -15,6 +15,7 @@ proc main in
     "\nFin\n" puts
 
     print
+    dump
 
     "\n\nDone\n" puts
 end
