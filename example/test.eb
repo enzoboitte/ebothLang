@@ -1,0 +1,10 @@
+
+
+proc sqrt in 
+    dup +
+end
+
+proc main in 
+    55 9 sqrt swap dump
+    "^2 = " puts dump
+end
