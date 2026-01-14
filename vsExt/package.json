@@ -1,21 +1,46 @@
 {
   "name": "eboth",
   "displayName": "Eboth Stack Language",
-  "version": "1.0.0",
+  "description": "Language support for Eboth, a stack-based programming language",
+  "version": "1.1.0",
   "publisher": "enzo",
-  "engines": {"vscode": "^1.60.0"},
-  "categories": ["Programming Languages"],
+  "author": "Enzo Boitte",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "eboth",
+    "stack",
+    "forth",
+    "assembly",
+    "syscall"
+  ],
   "contributes": {
-    "languages": [{
-      "id": "eboth",
-      "aliases": ["Eboth", "eboth"],
-      "extensions": [".eb"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "eboth",
-      "scopeName": "source.eb",
-      "path": "./syntaxes/stacklang.tmGrammar.json"
-    }]
+    "languages": [
+      {
+        "id": "eboth",
+        "aliases": ["Eboth", "eboth", "eb"],
+        "extensions": [".eb"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "eboth",
+        "scopeName": "source.eboth",
+        "path": "./syntaxes/eboth.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "eboth",
+        "path": "./snippets/eboth.json"
+      }
+    ]
   }
 }

@@ -1,0 +1,130 @@
+{
+  "Main procedure": {
+    "prefix": "main",
+    "body": [
+      "proc main in",
+      "    $0",
+      "end"
+    ],
+    "description": "Create the main procedure"
+  },
+  "Procedure": {
+    "prefix": "proc",
+    "body": [
+      "proc ${1:name} in",
+      "    $0",
+      "end"
+    ],
+    "description": "Create a procedure"
+  },
+  "Procedure with return type": {
+    "prefix": "procret",
+    "body": [
+      "proc ${1:name} ${2:args} ret ${3:i64} in",
+      "    $0",
+      "end"
+    ],
+    "description": "Create a procedure with return type"
+  },
+  "Constant": {
+    "prefix": "const",
+    "body": [
+      "proc ${1:NAME} in ${2:value} end"
+    ],
+    "description": "Create a constant (using proc pattern)"
+  },
+  "Hello World": {
+    "prefix": "hello",
+    "body": [
+      "proc main in",
+      "    \"Hello, World!\\n\" puts",
+      "end"
+    ],
+    "description": "Hello World program"
+  },
+  "Print string": {
+    "prefix": "print",
+    "body": [
+      "\"${1:text}\" puts"
+    ],
+    "description": "Print a string"
+  },
+  "Print number": {
+    "prefix": "printnum",
+    "body": [
+      "${1:value} dump"
+    ],
+    "description": "Print a number"
+  },
+  "Syscall write": {
+    "prefix": "write",
+    "body": [
+      "# write(fd, buf, len)",
+      "${1:1}             # fd (1 = stdout)",
+      "\"${2:text}\"       # buffer",
+      "${3:1}             # syscall number (write)",
+      "syscall3"
+    ],
+    "description": "Syscall3 for write"
+  },
+  "Syscall exit": {
+    "prefix": "exit",
+    "body": [
+      "# exit(code)",
+      "${1:0}             # exit code",
+      "60            # syscall number (exit)",
+      "syscall1"
+    ],
+    "description": "Syscall1 for exit"
+  },
+  "Duplicate top": {
+    "prefix": "dup",
+    "body": "dup",
+    "description": "Duplicate top of stack"
+  },
+  "Swap top two": {
+    "prefix": "swap",
+    "body": "swap",
+    "description": "Swap top two stack values"
+  },
+  "Add": {
+    "prefix": "add",
+    "body": [
+      "${1:a} ${2:b} +"
+    ],
+    "description": "Add two numbers"
+  },
+  "Square": {
+    "prefix": "square",
+    "body": [
+      "proc square in",
+      "    dup *",
+      "end"
+    ],
+    "description": "Square procedure"
+  },
+  "Double": {
+    "prefix": "double",
+    "body": [
+      "proc double in",
+      "    2 *",
+      "end"
+    ],
+    "description": "Double procedure"
+  },
+  "STDOUT constant": {
+    "prefix": "stdout",
+    "body": "proc STDOUT in 1 end",
+    "description": "Define STDOUT constant"
+  },
+  "STDIN constant": {
+    "prefix": "stdin",
+    "body": "proc STDIN in 0 end",
+    "description": "Define STDIN constant"
+  },
+  "STDERR constant": {
+    "prefix": "stderr",
+    "body": "proc STDERR in 2 end",
+    "description": "Define STDERR constant"
+  }
+}

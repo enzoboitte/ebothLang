@@ -1,0 +1,190 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Eboth",
+  "scopeName": "source.eboth",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#proc-definition" },
+    { "include": "#const-definition" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#syscalls" },
+    { "include": "#stack-ops" },
+    { "include": "#io-ops" },
+    { "include": "#arithmetic" },
+    { "include": "#comparison" },
+    { "include": "#numbers" },
+    { "include": "#constants" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.eboth",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.eboth",
+          "begin": "\"",
+          "end": "\"",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.eboth" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.eboth" }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.eboth",
+              "match": "\\\\[nrt\\\\\"0]"
+            },
+            {
+              "name": "constant.character.escape.hex.eboth",
+              "match": "\\\\x[0-9a-fA-F]{2}"
+            }
+          ]
+        }
+      ]
+    },
+    "proc-definition": {
+      "patterns": [
+        {
+          "match": "\\b(proc)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+          "captures": {
+            "1": { "name": "keyword.declaration.proc.eboth" },
+            "2": { "name": "support.function.eboth" }
+          }
+        }
+      ]
+    },
+    "const-definition": {
+      "patterns": [
+        {
+          "match": "\\b(const)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+          "captures": {
+            "1": { "name": "keyword.declaration.const.eboth" },
+            "2": { "name": "support.function.eboth" }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.eboth",
+          "match": "\\b(in|end|ret)\\b"
+        },
+        {
+          "name": "keyword.control.flow.eboth",
+          "match": "\\b(if|else|then|while|do|loop)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.eboth",
+          "match": "\\b(i8|u8|i16|u16|i32|u32|i64|u64|f32|f64|ptr|str|bool|void)\\b"
+        }
+      ]
+    },
+    "syscalls": {
+      "patterns": [
+        {
+          "name": "support.function.syscall.eboth",
+          "match": "\\b(syscall[0-6]?)\\b"
+        }
+      ]
+    },
+    "stack-ops": {
+      "patterns": [
+        {
+          "name": "support.function.stack.eboth",
+          "match": "\\b(dup|swap|drop|over|rot|nip|tuck)\\b"
+        }
+      ]
+    },
+    "io-ops": {
+      "patterns": [
+        {
+          "name": "support.function.io.eboth",
+          "match": "\\b(dump|puts|emit|key)\\b"
+        }
+      ]
+    },
+    "arithmetic": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arithmetic.eboth",
+          "match": "[+\\-*/%]"
+        }
+      ]
+    },
+    "comparison": {
+      "patterns": [
+        {
+          "name": "keyword.operator.comparison.eboth",
+          "match": "(==|!=|<=|>=|<|>)"
+        },
+        {
+          "name": "keyword.operator.logical.eboth",
+          "match": "\\b(and|or|not)\\b"
+        },
+        {
+          "name": "keyword.operator.bitwise.eboth",
+          "match": "\\b(band|bor|bxor|bnot|shl|shr)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.eboth",
+          "match": "\\b0x[0-9a-fA-F_]+\\b"
+        },
+        {
+          "name": "constant.numeric.binary.eboth",
+          "match": "\\b0b[01_]+\\b"
+        },
+        {
+          "name": "constant.numeric.octal.eboth",
+          "match": "\\b0o[0-7_]+\\b"
+        },
+        {
+          "name": "constant.numeric.float.eboth",
+          "match": "-?\\b\\d+\\.\\d+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.eboth",
+          "match": "-?\\b\\d+\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.eboth",
+          "match": "\\b(true|false|null)\\b"
+        },
+        {
+          "name": "variable.other.constant.eboth",
+          "match": "\\b[A-Z][A-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.eboth",
+          "match": "\\b[a-z_][a-z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}
