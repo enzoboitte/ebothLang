@@ -67,28 +67,23 @@ dump_str:
     pop     rbx
     syscall
     ret
-proc_print:
+proc_CONST_A:
     push     r15
     sub      r15, 8
-    mov      qword [r15], 10
-    sub      r15, 8
-    mov      qword [r15], 11
-    mov      rax, [r15 + 8]
-    sub      rax, [r15]
-    add      r15, 8
-    mov      [r15], rax
-    mov      rdi, [r15]
-    add      r15, 8
-    call     dump_i
+    mov      qword [r15], 100
     mov      rax, [r15]
     pop      r15
     sub      r15, 8
     mov      [r15], rax
     ret      
-proc_CONST_A:
+proc_calc:
     push     r15
-    sub      r15, 8
-    mov      qword [r15], 100
+    call     proc_CONST_A
+    call     proc_CONST_B
+    mov      rax, [r15]
+    add      rax, [r15 + 8]
+    add      r15, 8
+    mov      [r15], rax
     mov      rax, [r15]
     pop      r15
     sub      r15, 8
@@ -125,14 +120,26 @@ proc_CONST_B:
     sub      r15, 8
     mov      [r15], rax
     ret      
-proc_calc:
+proc_print:
     push     r15
-    call     proc_CONST_A
-    call     proc_CONST_B
+    sub      r15, 8
+    mov      qword [r15], 1
+    sub      r15, 8
+    mov      qword [r15], 2
+    mov      rax, [r15 + 8]
+    cqo      
+    idiv     qword [r15]
+    add      r15, 8
+    mov      [r15], rdx
+    sub      r15, 8
+    mov      qword [r15], 3
     mov      rax, [r15]
     add      rax, [r15 + 8]
     add      r15, 8
     mov      [r15], rax
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_i
     mov      rax, [r15]
     pop      r15
     sub      r15, 8

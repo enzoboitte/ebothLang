@@ -6,7 +6,7 @@ proc calc in
 end
 
 proc print in
-    10 11 - dump
+    1 2 % 3 + dump
 end
 
 proc main in
