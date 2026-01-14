@@ -3,7 +3,6 @@ section .bss
     data_stack: resq 4096
     data_stack_proc: resq 8192
 section .data
-    str_0: db "^2 = ", 0
 
 section .text
 
@@ -75,17 +74,9 @@ proc_main:
     mov      qword [r15], 9
     call     proc_sqrt
     mov      rax, [r15]
-    mov      rbx, [r15 + 8]
-    mov      [r15], rbx
-    mov      [r15 + 8], rax
-    mov      rdi, [r15]
+    add      rax, [r15 + 8]
     add      r15, 8
-    call     dump_i
-    sub      r15, 8
-    mov      qword [r15], str_0
-    mov      rdi, [r15]
-    add      r15, 8
-    call     dump_str
+    mov      [r15], rax
     mov      rdi, [r15]
     add      r15, 8
     call     dump_i
