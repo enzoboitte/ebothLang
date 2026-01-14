@@ -134,6 +134,21 @@ impl CStackToInterpreter {
                     let l_iA = l_lDataStack.pop().ok_or("Stack underflow sub")?;
                     l_lDataStack.push(l_iA - l_iB);
                 }
+                EIrInstr::MulI64 => {
+                    let l_iB = l_lDataStack.pop().ok_or("Stack underflow mul")?;
+                    let l_iA = l_lDataStack.pop().ok_or("Stack underflow mul")?;
+                    l_lDataStack.push(l_iA * l_iB);
+                }
+                EIrInstr::DivI64 => {
+                    let l_iB = l_lDataStack.pop().ok_or("Stack underflow div")?;
+                    let l_iA = l_lDataStack.pop().ok_or("Stack underflow div")?;
+                    l_lDataStack.push(l_iA / l_iB);
+                }
+                EIrInstr::ModI64 => {
+                    let l_iB = l_lDataStack.pop().ok_or("Stack underflow mod")?;
+                    let l_iA = l_lDataStack.pop().ok_or("Stack underflow mod")?;
+                    l_lDataStack.push(l_iA % l_iB);
+                }
                 EIrInstr::Swap => {
                     let l_iB = l_lDataStack.pop().ok_or("Stack underflow swap")?;
                     let l_iA = l_lDataStack.pop().ok_or("Stack underflow swap")?;
