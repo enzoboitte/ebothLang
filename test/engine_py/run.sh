@@ -1,0 +1,1 @@
+/bin/python3 ./engine.py && nasm -f elf64 output.asm && ld output.o -o output && ./output

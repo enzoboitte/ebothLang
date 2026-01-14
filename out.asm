@@ -2,7 +2,11 @@ section .bss
     dump_buf: resb 21
     data_stack: resq 4096
     data_stack_proc: resq 8192
+
 section .data
+    str_0: db "Calcul: ", 0
+    str_1: db "", 10, "Fin", 10, "", 0
+    str_2: db "", 10, "", 10, "Done", 10, "sqdfqsdf", 0
 
 section .text
 
@@ -46,8 +50,6 @@ dump_i:
     syscall
     add     rsp, 40
     ret
-
-
 dump_str:
     push    rbx
     mov     rbx, rdi
@@ -65,34 +67,75 @@ dump_str:
     pop     rbx
     syscall
     ret
-
-
-proc_main:
+proc_print:
+    push     r15
     sub      r15, 8
-    mov      qword [r15], 55
+    mov      qword [r15], 10
     sub      r15, 8
-    mov      qword [r15], 9
-    call     proc_sqrt
-    mov      rax, [r15]
-    add      rax, [r15 + 8]
+    mov      qword [r15], 11
+    mov      rax, [r15 + 8]
+    sub      rax, [r15]
     add      r15, 8
     mov      [r15], rax
     mov      rdi, [r15]
     add      r15, 8
     call     dump_i
-    ret      
-proc_sqrt:
-    lea      r14, [data_stack_proc + 8192*8]
-    push     r15
     mov      rax, [r15]
+    pop      r15
     sub      r15, 8
     mov      [r15], rax
+    ret      
+proc_CONST_A:
+    push     r15
+    sub      r15, 8
+    mov      qword [r15], 100
+    mov      rax, [r15]
+    pop      r15
+    sub      r15, 8
+    mov      [r15], rax
+    ret      
+proc_main:
+    sub      r15, 8
+    mov      qword [r15], str_0
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_str
+    call     proc_calc
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_i
+    sub      r15, 8
+    mov      qword [r15], str_1
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_str
+    call     proc_print
+    sub      r15, 8
+    mov      qword [r15], str_2
+    mov      rdi, [r15]
+    add      r15, 8
+    call     dump_str
+    ret      
+proc_CONST_B:
+    push     r15
+    sub      r15, 8
+    mov      qword [r15], 200
+    mov      rax, [r15]
+    pop      r15
+    sub      r15, 8
+    mov      [r15], rax
+    ret      
+proc_calc:
+    push     r15
+    call     proc_CONST_A
+    call     proc_CONST_B
     mov      rax, [r15]
     add      rax, [r15 + 8]
     add      r15, 8
     mov      [r15], rax
     mov      rax, [r15]
     pop      r15
+    sub      r15, 8
     mov      [r15], rax
     ret      
 

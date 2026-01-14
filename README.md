@@ -310,39 +310,52 @@ end
 ```
 eboth/
 ├── src/
-│   ├── main.rs      # Compiler, interpreter, and code generation
-│   └── syntax.rs    # Lexer and parser implementation
+│   ├── main.rs      # Entry point, IR definitions, and interpreter
+│   ├── syntax.rs    # Lexer and parser implementation
+│   └── engine.rs    # x86-64 assembly code generator
 ├── example/         # Example programs
 │   ├── basic.eb     # Hello World
 │   ├── functions.eb # Procedure examples
 │   ├── consts.eb    # Constants usage
+│   ├── example.eb   # General examples
 │   └── manipulation.eb  # Stack operations
 ├── Cargo.toml       # Rust project configuration
 ├── run.sh           # Build and execute script
 └── README.md        # This file
 ```
 
+## Architecture
+
+### Modules
+
+- **main.rs**: Contains the IR enum (`EIrInstr`), type definitions (`EType`), interpreter (`CStackToInterpreter`), and orchestrates the compilation pipeline
+- **syntax.rs**: Implements the lexer (`CLexer`) and parser (`CParser`) that transform source code into IR
+- **engine.rs**: Contains `StackAsmBuilder` for assembly generation and `StackCompiler` for compiling IR to x86-64 assembly
+
 ## Implementation Notes
 
 ### Memory Model
 
-- **Main stack (r15)**: Primary data stack for all operations
-- **Procedure stack (r14)**: Isolated stack frame for procedure locals (defined but currently uses r15)
-- **String pool**: Strings stored in `.data` section with automatic labeling
+- **Data stack (r15)**: Primary data stack for all operations, grows downward
+- **Procedure stack**: Callee-saved r15 via push/pop for isolated stack frames
+- **String pool**: Strings stored in `.data` section with automatic labeling (`str_0`, `str_1`, etc.)
 
 ### Calling Convention
 
 Procedures use the following convention:
-1. Arguments are passed on the stack
-2. Return value replaces topmost argument
-3. Stack pointer restored after procedure execution
+1. Caller pushes arguments onto the data stack
+2. Callee saves r15 (stack pointer) at entry
+3. Callee operates on its local stack view
+4. On return: if procedure returns a value, it replaces the top of the caller's stack
+5. For void procedures: stack is simply restored to caller's state
 
 ### Assembly Output
 
 Generated assembly includes:
-- `.bss` section: Uninitialized buffers for I/O
-- `.data` section: String literals and constants
-- `.text` section: Executable code with procedure definitions
+- `.bss` section: Data stack buffer (4096 qwords) and dump buffer
+- `.data` section: String literals with null termination
+- `.text` section: Helper functions (`dump_i`, `dump_str`) and procedure definitions
+- Entry point `_start`: Initializes stack pointer and calls `proc_main`
 
 ## Examples
 
@@ -375,11 +388,13 @@ The compiler outputs three stages:
 
 ## Limitations & Future Work
 
-- Type system is defined but not enforced during parsing
-- No control flow structures (if/while/for) yet
-- Limited error messages
-- No optimization passes
-- Linux x86-64 only
+- [ ] Type system is defined but not enforced during parsing
+- [ ] No control flow structures (if/else/while/for) yet
+- [ ] No local variables (only stack operations)
+- [ ] Limited error messages with line numbers
+- [ ] No optimization passes
+- [ ] Linux x86-64 only (no Windows/macOS support)
+- [ ] No standard library
 
 ## License
 
