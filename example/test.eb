@@ -5,6 +5,5 @@ proc sqrt in
 end
 
 proc main in 
-    55 9 sqrt swap dump
-    "^2 = " puts dump
+    55 9 sqrt + dump
 end
