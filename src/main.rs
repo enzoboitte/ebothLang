@@ -49,10 +49,10 @@ enum EIrInstr {
 
     // Arithmetic
     AddI64,                     // +
-    SubI64,                     // not implemented
-    MulI64,                     // not implemented
-    DivI64,                     // not implemented
-    ModI64,                     // not implemented   
+    SubI64,                     // -
+    MulI64,                     // *
+    DivI64,                     // /
+    ModI64,                     // %
 
     // Stack manipulation
     Dup,                        // dup
